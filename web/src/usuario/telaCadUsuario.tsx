@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { buildApiUrl } from '../utils/api';
 import { withTenantHeader } from '../utils/tenant';
 import "./telaCadUsuario.css";
 import { 
@@ -82,7 +83,7 @@ export default function TelaCadUsuario() {
 
     const fetchTenantInfo = async () => {
         try {
-          const response = await fetch('http://localhost:8080/api/tenant/current', {
+          const response = await fetch(buildApiUrl('/api/tenant/current'), {
             headers: withTenantHeader()
           });
           if (response.ok) {
@@ -97,7 +98,7 @@ export default function TelaCadUsuario() {
     const carregarDadosUsuario = async (userId: string) => {
         setLoading(true);
         try {
-            const responseUsuario = await fetch(`http://localhost:8080/api/usuario/${userId}`, {
+            const responseUsuario = await fetch(buildApiUrl(`/api/usuario/${userId}`), {
                 headers: withTenantHeader()
             });
             
@@ -290,8 +291,8 @@ export default function TelaCadUsuario() {
             }
 
             const url = id 
-                ? `http://localhost:8080/api/usuario/${id}`
-                : 'http://localhost:8080/api/usuario/registrar';
+                ? buildApiUrl(`/api/usuario/${id}`)
+                : buildApiUrl('/api/usuario/registrar');
             
             const method = id ? 'PUT' : 'POST';
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { buildApiUrl } from '../utils/api';
 import { withTenantHeader } from '../utils/tenant';
 import FeedbackModal from '../components/FeedbackModal';
 import "./TelaUsuario.css";
@@ -47,7 +48,7 @@ const TelaUsuario: React.FC = () => {
 
   const fetchTenantInfo = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/tenant/current', {
+      const response = await fetch(buildApiUrl('/api/tenant/current'), {
         headers: withTenantHeader()
       });
       if (response.ok) {
@@ -61,7 +62,7 @@ const TelaUsuario: React.FC = () => {
 
   const fetchUsuarios = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/usuario', {
+      const response = await fetch(buildApiUrl('/api/usuario'), {
         headers: withTenantHeader()
       });
       if (response.ok) {
@@ -77,7 +78,7 @@ const TelaUsuario: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/usuario/${id}`, {
+      const response = await fetch(buildApiUrl(`/api/usuario/${id}`), {
         method: 'DELETE',
         headers: withTenantHeader()
       });

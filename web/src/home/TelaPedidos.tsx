@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { buildApiUrl } from '../utils/api';
 import { withTenantHeader } from '../utils/tenant';
 import FeedbackModal from '../components/FeedbackModal';
 import './TelaPedidos.css';
@@ -75,7 +76,7 @@ export default function TelaPedidos() {
 
     const fetchTenantInfo = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/tenant/current', {
+            const response = await fetch(buildApiUrl('/api/tenant/current'), {
                 headers: withTenantHeader()
             });
             if (response.ok) {
@@ -145,7 +146,7 @@ export default function TelaPedidos() {
         };
 
         try {
-            const response = await fetch('http://localhost:8080/api/pedidos', {
+            const response = await fetch(buildApiUrl('/api/pedidos'), {
                 method: 'POST',
                 headers: withTenantHeader({
                     'Content-Type': 'application/json',

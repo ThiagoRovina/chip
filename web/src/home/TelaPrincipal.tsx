@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { buildApiUrl } from '../utils/api';
 import { withTenantHeader } from '../utils/tenant';
 import "./TelaPrincipal.css";
 import {
@@ -72,7 +73,7 @@ export default function TelaPrincipal() {
 
     const fetchTenantInfo = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/tenant/current', {
+            const response = await fetch(buildApiUrl('/api/tenant/current'), {
                 headers: withTenantHeader()
             });
             if (response.ok) {

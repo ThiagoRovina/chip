@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import axios from 'axios';
 import { withTenantHeader } from '../utils/tenant';
+import { buildApiUrl } from '../utils/api';
 
 interface User {
     idUsuario: string;
@@ -41,7 +42,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const login = async (email: string, senha: string): Promise<User> => {
         setLoading(true);
         try {
-            const response = await axios.post<User>('http://localhost:8080/api/usuario/login', {
+            const response = await axios.post<User>(buildApiUrl('/api/usuario/login'), {
                 email: email,
                 senha: senha
             }, {

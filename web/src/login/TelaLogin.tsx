@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { buildApiUrl } from '../utils/api';
 import { withTenantHeader } from '../utils/tenant';
 import "./TelaLogin.css";
 
@@ -24,7 +25,7 @@ const TelaLogin: React.FC = () => {
 
   const fetchTenantInfo = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/tenant/current', {
+      const response = await fetch(buildApiUrl('/api/tenant/current'), {
         headers: withTenantHeader()
       });
       if (response.ok) {
@@ -39,7 +40,7 @@ const TelaLogin: React.FC = () => {
   const fetchUsuarios = useCallback(async () => {
     try {
       setCarregandoUsuarios(true);
-      const response = await fetch('http://localhost:8080/api/usuario', {
+      const response = await fetch(buildApiUrl('/api/usuario'), {
         headers: withTenantHeader()
       });
       if (!response.ok) {

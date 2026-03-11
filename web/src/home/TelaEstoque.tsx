@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { buildApiUrl } from '../utils/api';
 import { withTenantHeader } from '../utils/tenant';
 import FeedbackModal from '../components/FeedbackModal';
 import './TelaEstoque.css';
@@ -95,7 +96,7 @@ export default function TelaEstoque() {
 
     const fetchTenantInfo = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/tenant/current', {
+            const response = await fetch(buildApiUrl('/api/tenant/current'), {
                 headers: withTenantHeader()
             });
             if (response.ok) {
@@ -109,7 +110,7 @@ export default function TelaEstoque() {
 
     const fetchEstoque = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/estoque', {
+            const response = await fetch(buildApiUrl('/api/estoque'), {
                 headers: withTenantHeader()
             });
             if (response.ok) {
@@ -245,7 +246,7 @@ export default function TelaEstoque() {
         const item = items.find(i => i.id === selectedItemId);
         const acaoTexto = modalOpen === 'entrada' ? 'Entrada' : modalOpen === 'saida' ? 'Saída' : modalOpen === 'perda' ? 'Perda' : 'Contagem';
 
-        const response = await fetch(`http://localhost:8080/api/estoque/${selectedItemId}/movimentar`, {
+        const response = await fetch(buildApiUrl(`/api/estoque/${selectedItemId}/movimentar`), {
             method: 'POST',
             headers: withTenantHeader({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({
@@ -273,7 +274,7 @@ export default function TelaEstoque() {
             return;
         }
 
-        const response = await fetch('http://localhost:8080/api/estoque/producoes', {
+        const response = await fetch(buildApiUrl('/api/estoque/producoes'), {
             method: 'POST',
             headers: withTenantHeader({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({
@@ -303,7 +304,7 @@ export default function TelaEstoque() {
             return;
         }
 
-        const response = await fetch('http://localhost:8080/api/estoque/montagem/consumos', {
+        const response = await fetch(buildApiUrl('/api/estoque/montagem/consumos'), {
             method: 'POST',
             headers: withTenantHeader({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({
@@ -330,8 +331,8 @@ export default function TelaEstoque() {
         try {
             if (modalOpen === 'novo' || modalOpen === 'editar') {
                 const url = modalOpen === 'novo'
-                    ? 'http://localhost:8080/api/estoque'
-                    : `http://localhost:8080/api/estoque/${selectedItemId}`;
+                    ? buildApiUrl('/api/estoque')
+                    : buildApiUrl(`/api/estoque/${selectedItemId}`);
 
                 const method = modalOpen === 'novo' ? 'POST' : 'PUT';
                 const response = await fetch(url, {
@@ -381,7 +382,7 @@ export default function TelaEstoque() {
         if (!selectedItemId) return;
 
         try {
-            const response = await fetch(`http://localhost:8080/api/estoque/${selectedItemId}`, {
+            const response = await fetch(buildApiUrl(`/api/estoque/${selectedItemId}`), {
                 method: 'DELETE',
                 headers: withTenantHeader({
                     'X-Perfil-Operacional': perfilOperacional,
