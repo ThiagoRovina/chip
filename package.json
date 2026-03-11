@@ -1,0 +1,10 @@
+{
+  "name": "chip",
+  "private": true,
+  "workspaces": [
+    "web"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace web"
+  }
+}
