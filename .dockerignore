@@ -1,0 +1,9 @@
+.git
+.idea
+web/node_modules
+web/build
+server-api/.gradle
+server-api/build
+server-api/out
+node_modules
+README.md
