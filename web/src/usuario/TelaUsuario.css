@@ -1,0 +1,275 @@
+/* TelaUsuario.css */
+
+/* --- LAYOUT GERAL --- */
+.dashboard-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #fff4e4; /* Fundo alterado para #fff4e4 */
+}
+
+.main-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 20px;
+    width: 100%;
+}
+
+/* --- CABEÇALHO DA PÁGINA --- */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.page-title h1 {
+    font-size: 1.8rem;
+    color: #333;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Botão Novo Usuário - Grande e Verde (Ação Positiva) */
+.new-user-btn {
+    background-color: #2E7D32; /* Verde para "Adicionar/Positivo" */
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 50px; /* Bem arredondado */
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.new-user-btn:hover {
+    background-color: #1B5E20;
+    transform: scale(1.05);
+}
+
+/* Botão Voltar - Estilo similar mas neutro */
+.btn-voltar-listagem {
+    background-color: #fff;
+    color: #666;
+    border: 1px solid #ccc;
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: background-color 0.2s;
+}
+
+.btn-voltar-listagem:hover {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+/* --- GRID DE CARTÕES (Substitui a Tabela) --- */
+.user-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+/* --- CARTÃO DO USUÁRIO --- */
+.user-card {
+    background: white;
+    border-radius: 16px;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.user-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    border-color: #ffebee;
+}
+
+/* Avatar Grande */
+.card-avatar-large {
+    width: 90px;
+    height: 90px;
+    background-color: #FFEBEE;
+    color: #D32F2F;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+    border: 4px solid #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Informações */
+.user-info h3 {
+    margin: 0 0 5px 0;
+    color: #333;
+    font-size: 1.4rem;
+}
+
+.user-info p {
+    margin: 0;
+    color: #666;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* --- BOTÕES DE AÇÃO (Grandes e Claros) --- */
+.card-actions {
+    display: flex;
+    width: 100%;
+    gap: 15px;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+/* Classe específica para botões dentro do card de usuário */
+.user-card .action-btn {
+    flex: 1;
+    height: 50px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: background 0.2s;
+    /* Resetando estilos que podem estar vindo de outros lugares */
+    flex-direction: row;
+    padding: 0;
+    box-shadow: none;
+    text-transform: none;
+}
+
+/* Botão Editar (Azul/Neutro) */
+.btn-edit-card {
+    background-color: #1565C0; /* Azul mais escuro para melhor contraste */
+    color: white; /* Texto branco para contraste */
+}
+
+.btn-edit-card:hover {
+    background-color: #0D47A1;
+}
+
+/* Botão Excluir (Vermelho/Perigo) */
+.btn-delete-card {
+    background-color: #C62828; /* Vermelho mais escuro para melhor contraste */
+    color: white; /* Texto branco para contraste */
+}
+
+.btn-delete-card:hover {
+    background-color: #B71C1C;
+}
+
+/* Estado de Carregamento/Vazio */
+.empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 50px;
+    color: #666;
+    font-size: 1.2rem;
+}
+
+.confirm-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+    padding: 20px;
+}
+
+.confirm-modal-content {
+    width: 100%;
+    max-width: 420px;
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+}
+
+.confirm-modal-content h3 {
+    margin: 0 0 12px 0;
+    color: #C62828;
+    font-size: 1.4rem;
+}
+
+.confirm-modal-content p {
+    margin: 0 0 20px 0;
+    color: #333;
+    line-height: 1.4;
+}
+
+.confirm-modal-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.confirm-btn-cancel,
+.confirm-btn-delete {
+    flex: 1;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+.confirm-btn-cancel {
+    background: #eee;
+    color: #333;
+}
+
+.confirm-btn-delete {
+    background: #C62828;
+    color: #fff;
+}
+
+.confirm-btn-delete:hover {
+    background: #B71C1C;
+}
+
+/* Responsividade */
+@media (max-width: 600px) {
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .new-user-btn {
+        justify-content: center;
+    }
+}

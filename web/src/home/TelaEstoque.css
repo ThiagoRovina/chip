@@ -1,0 +1,639 @@
+/* TelaEstoque.css */
+:root {
+    --stock-green: #2E7D32;
+    /* Verde mais escuro para contraste */
+    --stock-blue: #1565C0;
+    --stock-red: #C62828;
+    --stock-purple: #6A1B9A;
+    --stock-bg: #fff4e4;
+    /* Fundo alterado para #fff4e4 */
+    --stock-card-bg: #FFFFFF;
+    --text-dark: #212121;
+}
+
+.stock-container {
+    padding: 0;
+    background-color: var(--stock-bg);
+    min-height: 100vh;
+    font-family: 'Segoe UI', 'Roboto', sans-serif;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Navbar fixa (mantida original) */
+.top-nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #fff;
+    padding: 0 20px;
+    height: 70px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #333;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.back-btn:hover {
+    background-color: #f0f0f0;
+}
+
+.nav-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #333;
+}
+
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    padding: 8px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.icon-btn:hover {
+    background-color: #f0f0f0;
+}
+
+.notification-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    background-color: #D32F2F;
+    border-radius: 50%;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 12px;
+    border-radius: 30px;
+    background-color: #f5f5f5;
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    background-color: #D32F2F;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.user-role {
+    font-size: 0.75rem;
+    color: #666;
+}
+
+.stock-content {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.stock-header {
+    margin-bottom: 30px;
+    margin-top: 10px;
+    text-align: center;
+    /* Centralizado para facilitar foco */
+}
+
+.stock-header h1 {
+    font-size: 2.2rem;
+    color: var(--text-dark);
+    margin-bottom: 10px;
+}
+
+.stock-header p {
+    font-size: 1.2rem;
+    color: #555;
+}
+
+.btn-new-item {
+    background-color: var(--stock-blue);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+
+.btn-new-item:hover {
+    background-color: #0D47A1;
+}
+
+/* --- AÇÕES PRINCIPAIS (BOTÕES GIGANTES) --- */
+.stock-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    /* Cards mais largos */
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.action-btn {
+    border: none;
+    border-radius: 20px;
+    /* Bordas bem arredondadas */
+    padding: 30px 20px;
+    color: white;
+    font-size: 1.4rem;
+    /* Letra grande */
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 6px 0 rgba(0, 0, 0, 0.2);
+    /* Efeito 3D de botão físico */
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.action-btn:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.btn-entry {
+    background-color: var(--stock-green);
+}
+
+.btn-use {
+    background-color: var(--stock-blue);
+}
+
+.btn-waste {
+    background-color: var(--stock-red);
+}
+
+.btn-count {
+    background-color: var(--stock-purple);
+}
+
+/* --- ALERTS (VISUAL DE SEMÁFORO) --- */
+.stock-alerts {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+}
+
+.alert-card {
+    flex: 1;
+    min-width: 280px;
+    background: var(--stock-card-bg);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border: 2px solid transparent;
+}
+
+.alert-card.critical {
+    background-color: #FFEBEE;
+    border-color: var(--stock-red);
+    color: var(--stock-red);
+}
+
+.alert-card.warning {
+    background-color: #FFF8E1;
+    border-color: #FF8F00;
+    color: #E65100;
+}
+
+.alert-icon {
+    font-size: 2.5rem;
+}
+
+.alert-info h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.alert-info span {
+    font-size: 1.8rem;
+    font-weight: 900;
+    display: block;
+}
+
+/* --- LISTA DE ITENS (CARDS GRANDES) --- */
+.stock-list-section h2 {
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+    color: var(--text-dark);
+    border-left: 8px solid var(--stock-blue);
+    padding-left: 15px;
+}
+
+.stock-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    /* Cards maiores */
+    gap: 25px;
+}
+
+.item-card {
+    background: var(--stock-card-bg);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    position: relative;
+    transition: transform 0.2s;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.item-card:hover {
+    transform: scale(1.03);
+    border-color: var(--stock-blue);
+}
+
+.edit-icon-overlay {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 5px;
+    border-radius: 50%;
+    display: none;
+}
+
+.item-card:hover .edit-icon-overlay {
+    display: block;
+}
+
+.item-image {
+    height: 160px;
+    /* Imagem maior */
+    background-color: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    /* Emoji grande */
+}
+
+.item-info {
+    padding: 15px;
+    text-align: center;
+}
+
+.item-name {
+    font-weight: 800;
+    font-size: 1.3rem;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.item-qty {
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: #333;
+}
+
+.item-unit {
+    font-size: 1rem;
+    color: #666;
+}
+
+/* Status Badges - Semáforo */
+.status-indicator {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.status-green {
+    background-color: var(--stock-green);
+}
+
+.status-red {
+    background-color: var(--stock-red);
+    animation: pulse 2s infinite;
+}
+
+.status-yellow {
+    background-color: #FFC107;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(198, 40, 40, 0.7);
+    }
+
+    70% {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 10px rgba(198, 40, 40, 0);
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(198, 40, 40, 0);
+    }
+}
+
+/* --- MODAL ACESSÍVEL --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    /* Fundo mais escuro para foco */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 24px;
+    width: 100%;
+    max-width: 600px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    text-align: center;
+    margin-bottom: 30px;
+    position: relative;
+}
+
+.modal-header h2 {
+    font-size: 2rem;
+    color: var(--text-dark);
+}
+
+.close-btn-large {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: #eee;
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    font-size: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #333;
+}
+
+/* Seleção de Item Visual */
+.item-select-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.item-select-card {
+    border: 2px solid #eee;
+    border-radius: 12px;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.item-select-card.selected {
+    border-color: var(--stock-blue);
+    background-color: #E3F2FD;
+    transform: scale(1.05);
+}
+
+.item-select-card span {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.item-select-card img {
+    display: block;
+    margin: 0 auto;
+}
+
+/* Controle de Quantidade Gigante */
+.qty-control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    margin: 30px 0;
+}
+
+.btn-qty {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    border: none;
+    font-size: 2.5rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.btn-minus {
+    background-color: #FFEBEE;
+    color: var(--stock-red);
+}
+
+.btn-plus {
+    background-color: #E8F5E9;
+    color: var(--stock-green);
+}
+
+.qty-display {
+    font-size: 3rem;
+    font-weight: bold;
+    width: 120px;
+    text-align: center;
+    border: none;
+    background: transparent;
+}
+
+.modal-big-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.btn-big-confirm {
+    flex: 2;
+    background-color: var(--stock-green);
+    color: white;
+    border: none;
+    padding: 20px;
+    border-radius: 16px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #1B5E20;
+}
+
+.btn-big-confirm:active {
+    transform: translateY(4px);
+    box-shadow: none;
+}
+
+.btn-big-cancel {
+    flex: 1;
+    background-color: #eee;
+    color: #333;
+    border: none;
+    padding: 20px;
+    border-radius: 16px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.btn-big-delete {
+    flex: 1;
+    background-color: #FFEBEE;
+    color: var(--stock-red);
+    border: none;
+    padding: 20px;
+    border-radius: 16px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+/* Formulário CRUD */
+.form-crud {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.form-group label {
+    font-weight: bold;
+    color: #555;
+}
+
+.form-group input,
+.form-group select {
+    padding: 12px;
+    border: 2px solid #eee;
+    border-radius: 10px;
+    font-size: 1rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+/* Responsividade */
+@media (max-width: 600px) {
+    .stock-actions {
+        grid-template-columns: 1fr;
+        /* Um botão por linha no celular */
+    }
+
+    .action-btn {
+        flex-direction: row;
+        /* Ícone ao lado do texto */
+        justify-content: flex-start;
+        padding: 20px;
+        text-align: left;
+    }
+
+    .stock-header h1 {
+        font-size: 1.8rem;
+    }
+}

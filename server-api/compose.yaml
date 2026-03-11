@@ -1,0 +1,9 @@
+services:
+  postgres:
+    image: 'postgres:17'
+    environment:
+      - 'POSTGRES_DB=chipcook'
+      - 'POSTGRES_PASSWORD=12345'
+      - 'POSTGRES_USER=postgres'
+    ports:
+      - '12345'
