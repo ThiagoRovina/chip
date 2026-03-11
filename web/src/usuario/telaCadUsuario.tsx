@@ -1,19 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { buildApiUrl } from '../utils/api';
 import { withTenantHeader } from '../utils/tenant';
 import "./telaCadUsuario.css";
 import { 
-  Search, 
   LogOut, 
   Bell,
   User,
   ArrowLeft,
   Save,
   ScanFace,
-  Camera,
-  Upload
+  Camera
 } from 'lucide-react';
 
 export default function TelaCadUsuario() {
@@ -74,13 +72,6 @@ export default function TelaCadUsuario() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (id) {
-            carregarDadosUsuario(id);
-        }
-        fetchTenantInfo();
-    }, [id]);
-
     const fetchTenantInfo = async () => {
         try {
           const response = await fetch(buildApiUrl('/api/tenant/current'), {
@@ -95,7 +86,7 @@ export default function TelaCadUsuario() {
         }
     };
 
-    const carregarDadosUsuario = async (userId: string) => {
+    const carregarDadosUsuario = useCallback(async (userId: string) => {
         setLoading(true);
         try {
             const responseUsuario = await fetch(buildApiUrl(`/api/usuario/${userId}`), {
@@ -107,7 +98,6 @@ export default function TelaCadUsuario() {
                 const func = usuarioData.funcionario;
                 
                 const newState = {
-                    ...formData,
                     nmUsuario: usuarioData.nmUsuario,
                     nmEmailUsuario: usuarioData.nmEmailUsuario,
                     fotoPerfilUsuario: usuarioData.fotoPerfilUsuario || '',
@@ -159,7 +149,14 @@ export default function TelaCadUsuario() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [navigate]);
+
+    useEffect(() => {
+        if (id) {
+            carregarDadosUsuario(id);
+        }
+        fetchTenantInfo();
+    }, [id, carregarDadosUsuario]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;

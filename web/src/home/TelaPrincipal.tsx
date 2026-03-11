@@ -11,7 +11,6 @@ import {
     UtensilsCrossed,
     ChefHat,
     ClipboardList,
-    DollarSign,
     Package
 } from 'lucide-react';
 

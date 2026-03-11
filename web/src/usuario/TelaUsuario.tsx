@@ -6,7 +6,6 @@ import { withTenantHeader } from '../utils/tenant';
 import FeedbackModal from '../components/FeedbackModal';
 import "./TelaUsuario.css";
 import { 
-  Search, 
   LogOut, 
   UserPlus,
   Trash2,

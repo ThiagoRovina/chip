@@ -7,7 +7,6 @@ import FeedbackModal from '../components/FeedbackModal';
 import './TelaPedidos.css';
 import {
     ArrowLeft,
-    Trash2,
     Plus,
     Minus,
     Send,
