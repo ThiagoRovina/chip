@@ -22,7 +22,6 @@ public class Produto {
     private BigDecimal preco;
     private String categoria; // Bebidas, Lanches, Sobremesas
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String imagem; // URL, emoji ou base64
 

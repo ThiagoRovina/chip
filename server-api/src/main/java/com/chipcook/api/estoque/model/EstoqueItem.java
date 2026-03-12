@@ -21,7 +21,6 @@ public class EstoqueItem {
     private LocalDate validade;
     private String categoria; // Frios, Hortifruti, etc.
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String imagem; // Emoji, URL ou base64
 
