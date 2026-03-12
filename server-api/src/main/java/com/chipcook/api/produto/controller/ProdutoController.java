@@ -21,18 +21,30 @@ public class ProdutoController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Produto> buscarPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(produtoService.buscarPorId(id));
+    public ResponseEntity<?> buscarPorId(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(produtoService.buscarPorId(id));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @PostMapping
-    public ResponseEntity<Produto> criar(@RequestBody Produto produto) {
-        return ResponseEntity.ok(produtoService.salvar(produto));
+    public ResponseEntity<?> criar(@RequestBody Produto produto) {
+        try {
+            return ResponseEntity.ok(produtoService.salvar(produto));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Produto> atualizar(@PathVariable Long id, @RequestBody Produto produto) {
-        return ResponseEntity.ok(produtoService.atualizar(id, produto));
+    public ResponseEntity<?> atualizar(@PathVariable Long id, @RequestBody Produto produto) {
+        try {
+            return ResponseEntity.ok(produtoService.atualizar(id, produto));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @DeleteMapping("/{id}")

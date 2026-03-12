@@ -28,8 +28,12 @@ public class PedidoController {
     }
 
     @PostMapping
-    public ResponseEntity<Pedido> criar(@RequestBody PedidoDTO dto) {
-        return ResponseEntity.ok(pedidoService.criarPedido(dto));
+    public ResponseEntity<?> criar(@RequestBody PedidoDTO dto) {
+        try {
+            return ResponseEntity.ok(pedidoService.criarPedido(dto));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @PutMapping("/{id}/iniciar")

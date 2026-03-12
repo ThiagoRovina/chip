@@ -37,6 +37,18 @@ public class Produto {
     @OrderColumn(name = "ordem")
     private List<ProdutoPassoReceita> passos = new ArrayList<>();
 
+    @Transient
+    private Boolean estoqueDisponivel;
+
+    @Transient
+    private Boolean disponivelVenda;
+
+    @Transient
+    private Integer quantidadeMaximaDisponivel;
+
+    @Transient
+    private String motivoIndisponibilidade;
+
     @Column(name = "tenant_id")
     private String tenantId;
 

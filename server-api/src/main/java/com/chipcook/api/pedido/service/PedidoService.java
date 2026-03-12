@@ -13,7 +13,7 @@ import com.chipcook.api.pedido.model.ItemPedido;
 import com.chipcook.api.pedido.model.Pedido;
 import com.chipcook.api.pedido.repository.PedidoRepository;
 import com.chipcook.api.produto.model.Produto;
-import com.chipcook.api.produto.repository.ProdutoRepository;
+import com.chipcook.api.produto.service.ProdutoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +37,7 @@ public class PedidoService {
     private EstoqueService estoqueService;
 
     @Autowired
-    private ProdutoRepository produtoRepository;
+    private ProdutoService produtoService;
 
     private static final String STATUS_CONCLUIDO = "concluido";
     private static final String STATUS_PREPARANDO = "preparando";
@@ -61,9 +61,12 @@ public class PedidoService {
         pedido.setCliente(dto.getCliente());
         
         List<ItemPedido> itens = dto.getItens().stream().map(itemDto -> {
+            Produto produto = produtoService.buscarPorIdParaVenda(itemDto.getProdutoId());
+            validarQuantidadeDisponivel(produto, itemDto.getQuantidade());
+
             ItemPedido item = new ItemPedido();
             item.setProdutoId(itemDto.getProdutoId());
-            item.setNomeProduto(itemDto.getNomeProduto());
+            item.setNomeProduto(produto.getNome());
             item.setQuantidade(itemDto.getQuantidade());
             item.setObservacao(itemDto.getObservacao());
             item.setPedido(pedido);
@@ -119,8 +122,11 @@ public class PedidoService {
         for (Map.Entry<Long, Double> consumo : consumosPorItem.entrySet()) {
             EstoqueItem itemEstoque = estoqueRepository.findByIdAndTenantId(consumo.getKey(), tenantId)
                     .orElseThrow(() -> new IllegalArgumentException("Item de estoque não encontrado"));
-            itemEstoque.setQuantidade(itemEstoque.getQuantidade() - consumo.getValue());
-            estoqueRepository.save(itemEstoque);
+            estoqueService.baixarParaPedido(
+                    itemEstoque.getId(),
+                    consumo.getValue(),
+                    "Consumo automático do pedido #" + pedido.getId()
+            );
         }
 
         pedido.setStatus(STATUS_CONCLUIDO);
@@ -235,9 +241,11 @@ public class PedidoService {
         if (itemPedido.getProdutoId() == null) {
             return null;
         }
-
-        String tenantId = TenantContext.getTenantId();
-        return produtoRepository.findByIdAndTenantId(itemPedido.getProdutoId(), tenantId).orElse(null);
+        try {
+            return produtoService.buscarPorId(itemPedido.getProdutoId());
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     private EstoqueItem resolverItemEstoque(String tenantId, ReceitaIngredienteConfig receita) {
@@ -269,6 +277,20 @@ public class PedidoService {
             return String.format("%.0f", quantidade);
         }
         return String.format("%.2f", quantidade);
+    }
+
+    private void validarQuantidadeDisponivel(Produto produto, Integer quantidadeSolicitada) {
+        if (quantidadeSolicitada == null || quantidadeSolicitada <= 0) {
+            throw new IllegalArgumentException("Quantidade do item deve ser maior que zero");
+        }
+
+        Integer maximaDisponivel = produto.getQuantidadeMaximaDisponivel();
+        if (maximaDisponivel != null && quantidadeSolicitada > maximaDisponivel) {
+            throw new IllegalArgumentException(
+                    "Estoque insuficiente para " + produto.getNome()
+                            + ". Disponível para venda: " + maximaDisponivel
+            );
+        }
     }
 
     private record ReceitaIngredienteConfig(Long estoqueItemId, String nomeInsumo, double quantidadePorUnidade, String unidade) {

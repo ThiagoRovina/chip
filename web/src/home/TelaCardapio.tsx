@@ -28,6 +28,10 @@ interface Produto {
     categoria: string;
     imagem: string;
     disponivel: boolean;
+    estoqueDisponivel?: boolean;
+    disponivelVenda?: boolean;
+    quantidadeMaximaDisponivel?: number | null;
+    motivoIndisponibilidade?: string | null;
     ingredientes: ProdutoIngrediente[];
     passos: ProdutoPasso[];
 }
@@ -252,7 +256,8 @@ export default function TelaCardapio() {
             );
 
             if (!response.ok) {
-                throw new Error('Falha ao salvar produto');
+                const erro = await response.text();
+                throw new Error(erro || 'Falha ao salvar produto');
             }
 
             setFeedback({
@@ -269,7 +274,7 @@ export default function TelaCardapio() {
             setFeedback({
                 open: true,
                 title: 'Não foi possível salvar',
-                message: 'Revise os dados e tente novamente.',
+                message: error instanceof Error ? error.message : 'Revise os dados e tente novamente.',
                 variant: 'error'
             });
         } finally {
@@ -287,7 +292,8 @@ export default function TelaCardapio() {
             });
 
             if (!response.ok) {
-                throw new Error('Falha ao excluir produto');
+                const erro = await response.text();
+                throw new Error(erro || 'Falha ao excluir produto');
             }
 
             if (editingId === produtoId) {
@@ -307,7 +313,7 @@ export default function TelaCardapio() {
             setFeedback({
                 open: true,
                 title: 'Não foi possível excluir',
-                message: 'Tente novamente em alguns segundos.',
+                message: error instanceof Error ? error.message : 'Tente novamente em alguns segundos.',
                 variant: 'error'
             });
         }
@@ -371,8 +377,17 @@ export default function TelaCardapio() {
                                     <div className="produto-meta">
                                         <span>R$ {Number(produto.preco || 0).toFixed(2)}</span>
                                         <span>{produto.disponivel ? 'Disponível' : 'Indisponível'}</span>
+                                        <span>{produto.disponivelVenda === false ? 'Bloqueado por estoque' : 'Venda liberada'}</span>
+                                        {produto.quantidadeMaximaDisponivel !== null && produto.quantidadeMaximaDisponivel !== undefined && (
+                                            <span>Máx. {produto.quantidadeMaximaDisponivel} venda(s)</span>
+                                        )}
                                         <span>{produto.passos?.length || 0} passos</span>
                                     </div>
+                                    {produto.disponivelVenda === false && produto.motivoIndisponibilidade && (
+                                        <p style={{ marginTop: '10px', color: '#B71C1C', fontWeight: 700 }}>
+                                            {produto.motivoIndisponibilidade}
+                                        </p>
+                                    )}
                                     <div className="produto-actions">
                                         <button type="button" onClick={() => startEdit(produto)}>
                                             <Pencil size={16} />

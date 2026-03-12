@@ -46,12 +46,45 @@ interface FeedbackState {
     variant: 'success' | 'error' | 'info';
 }
 
+interface DashboardAlerta {
+    itemId: number;
+    nome: string;
+    categoriaEstoque: string;
+    quantidadeAtual: number;
+    estoqueMinimo: number;
+    unidade: string;
+    status: string;
+}
+
+interface DashboardMovimentacao {
+    itemNome: string;
+    tipo: string;
+    quantidade: number;
+    motivo?: string;
+    categoriaOrigem?: string;
+    categoriaDestino?: string;
+    dataHora: string;
+}
+
+interface EstoqueDashboard {
+    itensAbaixoMinimo: number;
+    itensVencendo: number;
+    perdasUltimos7Dias: number;
+    quantidadePerdidaUltimos7Dias: number;
+    transferenciasUltimos7Dias: number;
+    quantidadeTransferidaUltimos7Dias: number;
+    reposicoesPendentes: DashboardAlerta[];
+    perdasRecentes: DashboardMovimentacao[];
+    transferenciasRecentes: DashboardMovimentacao[];
+}
+
 export default function TelaEstoque() {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
 
     const [tenantName, setTenantName] = useState(' ');
     const [items, setItems] = useState<EstoqueItem[]>([]);
+    const [dashboard, setDashboard] = useState<EstoqueDashboard | null>(null);
     const [loading, setLoading] = useState(true);
     const [selectedCategoria, setSelectedCategoria] = useState<CategoriaEstoque>('geral');
 
@@ -89,11 +122,23 @@ export default function TelaEstoque() {
         { value: 'porcao_geral', label: 'Porção Geral' },
         { value: 'porcao', label: 'Porção Montagem' }
     ]), []);
+    const allowedCategories = useMemo(() => getAllowedCategories(perfilOperacional), [perfilOperacional]);
+    const categoriasVisiveis = useMemo(
+        () => categorias.filter(cat => allowedCategories.includes(cat.value)),
+        [categorias, allowedCategories]
+    );
 
     useEffect(() => {
         fetchTenantInfo();
         fetchEstoque();
+        fetchDashboard();
     }, []);
+
+    useEffect(() => {
+        if (!allowedCategories.includes(selectedCategoria)) {
+            setSelectedCategoria(allowedCategories[0] ?? 'geral');
+        }
+    }, [allowedCategories, selectedCategoria]);
 
     const fetchTenantInfo = async () => {
         try {
@@ -122,6 +167,20 @@ export default function TelaEstoque() {
             console.error('Erro ao buscar estoque:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchDashboard = async () => {
+        try {
+            const response = await fetch(buildApiUrl('/api/estoque/dashboard'), {
+                headers: withTenantHeader()
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setDashboard(data);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar dashboard de estoque:', error);
         }
     };
 
@@ -188,7 +247,6 @@ export default function TelaEstoque() {
         return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
     };
 
-    const allowedCategories = getAllowedCategories(perfilOperacional);
     const visibleItems = items.filter(i => allowedCategories.includes(i.categoriaEstoque ?? 'geral'));
     const itemsDaCategoria = visibleItems.filter(i => (i.categoriaEstoque ?? 'geral') === selectedCategoria);
     const criticalItems = itemsDaCategoria.filter(i => i.status === 'baixo' || i.status === 'vencendo');
@@ -271,6 +329,7 @@ export default function TelaEstoque() {
 
         openFeedback('Movimentação registrada', `${acaoTexto} de ${quantidade} ${item?.unidade} de ${item?.nome}.`, 'success');
         await fetchEstoque();
+        await fetchDashboard();
         closeModal();
     };
 
@@ -301,6 +360,7 @@ export default function TelaEstoque() {
 
         openFeedback('Produção registrada', 'Porções registradas com sucesso.', 'success');
         await fetchEstoque();
+        await fetchDashboard();
         closeModal();
     };
 
@@ -328,6 +388,7 @@ export default function TelaEstoque() {
 
         openFeedback('Baixa registrada', 'Consumo na montagem registrado com sucesso.', 'success');
         await fetchEstoque();
+        await fetchDashboard();
         closeModal();
     };
 
@@ -363,6 +424,7 @@ export default function TelaEstoque() {
             'success'
         );
         await fetchEstoque();
+        await fetchDashboard();
         closeModal();
     };
 
@@ -393,6 +455,7 @@ export default function TelaEstoque() {
 
                 openFeedback('Salvo com sucesso', modalOpen === 'novo' ? 'Item criado com sucesso.' : 'Item atualizado com sucesso.', 'success');
                 await fetchEstoque();
+                await fetchDashboard();
                 closeModal();
                 return;
             }
@@ -443,6 +506,7 @@ export default function TelaEstoque() {
 
             openFeedback('Item excluído', 'Item removido com sucesso.', 'success');
             await fetchEstoque();
+            await fetchDashboard();
             setConfirmDeleteOpen(false);
             closeModal();
         } catch (error) {
@@ -530,7 +594,7 @@ export default function TelaEstoque() {
                 </section>
 
                 <section style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
-                    {categorias.map(cat => (
+                    {categoriasVisiveis.map(cat => (
                         <button
                             key={cat.value}
                             onClick={() => setSelectedCategoria(cat.value)}
@@ -564,6 +628,55 @@ export default function TelaEstoque() {
                         </div>
                     </div>
                 </section>
+
+                {dashboard && (
+                    <section style={{ marginBottom: '24px', display: 'grid', gap: '16px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                            <DashboardCard title="Reposição" value={dashboard.itensAbaixoMinimo} subtitle="Itens abaixo do mínimo" color="#C62828" />
+                            <DashboardCard title="Vencendo" value={dashboard.itensVencendo} subtitle="Itens com validade próxima" color="#ED6C02" />
+                            <DashboardCard title="Perdas 7 dias" value={dashboard.quantidadePerdidaUltimos7Dias} subtitle={`${dashboard.perdasUltimos7Dias} ocorrência(s)`} color="#6A1B9A" />
+                            <DashboardCard title="Transferido 7 dias" value={dashboard.quantidadeTransferidaUltimos7Dias} subtitle={`${dashboard.transferenciasUltimos7Dias} envio(s)`} color="#1565C0" />
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                            <DashboardListCard title="Reposição pendente">
+                                {dashboard.reposicoesPendentes.length === 0 ? (
+                                    <p style={{ margin: 0, color: '#666' }}>Nenhum item abaixo do mínimo.</p>
+                                ) : dashboard.reposicoesPendentes.map(item => (
+                                    <div key={item.itemId} style={dashboardRowStyle}>
+                                        <strong>{item.nome}</strong>
+                                        <span>{item.quantidadeAtual} {item.unidade} de mínimo {item.estoqueMinimo}</span>
+                                        <span>{item.categoriaEstoque}</span>
+                                    </div>
+                                ))}
+                            </DashboardListCard>
+
+                            <DashboardListCard title="Perdas recentes">
+                                {dashboard.perdasRecentes.length === 0 ? (
+                                    <p style={{ margin: 0, color: '#666' }}>Nenhuma perda registrada.</p>
+                                ) : dashboard.perdasRecentes.map((mov, index) => (
+                                    <div key={`${mov.itemNome}-${mov.dataHora}-${index}`} style={dashboardRowStyle}>
+                                        <strong>{mov.itemNome}</strong>
+                                        <span>{mov.quantidade} | {formatDateTime(mov.dataHora)}</span>
+                                        <span>{mov.motivo || 'Sem motivo informado'}</span>
+                                    </div>
+                                ))}
+                            </DashboardListCard>
+
+                            <DashboardListCard title="Reposições recentes">
+                                {dashboard.transferenciasRecentes.length === 0 ? (
+                                    <p style={{ margin: 0, color: '#666' }}>Nenhuma transferência registrada.</p>
+                                ) : dashboard.transferenciasRecentes.map((mov, index) => (
+                                    <div key={`${mov.itemNome}-${mov.dataHora}-${index}`} style={dashboardRowStyle}>
+                                        <strong>{mov.itemNome}</strong>
+                                        <span>{mov.quantidade} | {formatDateTime(mov.dataHora)}</span>
+                                        <span>{mov.categoriaOrigem || 'Origem'} → {mov.categoriaDestino || 'Destino'}</span>
+                                    </div>
+                                ))}
+                            </DashboardListCard>
+                        </div>
+                    </section>
+                )}
 
                 <section className="stock-list-section">
                     {loading ? (
@@ -654,7 +767,7 @@ export default function TelaEstoque() {
                                                 value={itemForm.categoriaEstoque}
                                                 onChange={(e) => setItemForm({ ...itemForm, categoriaEstoque: e.target.value as CategoriaEstoque })}
                                             >
-                                                {categorias.map(cat => (
+                                                {categoriasVisiveis.map(cat => (
                                                     <option key={cat.value} value={cat.value}>{cat.label}</option>
                                                 ))}
                                             </select>
@@ -948,4 +1061,54 @@ function getAllowedCategories(perfil: string): CategoriaEstoque[] {
     if (perfil === 'producao') return ['interno', 'porcao_geral'];
     if (perfil === 'montagem') return ['porcao_geral', 'porcao'];
     return ['geral', 'interno', 'porcao_geral', 'porcao'];
+}
+
+function DashboardCard({ title, value, subtitle, color }: { title: string; value: string | number; subtitle: string; color: string }) {
+    return (
+        <div style={{
+            background: '#fff',
+            borderRadius: '18px',
+            padding: '16px',
+            border: `1px solid ${color}22`,
+            boxShadow: '0 8px 18px rgba(0,0,0,0.05)'
+        }}>
+            <div style={{ color, fontWeight: 800, fontSize: '0.9rem', marginBottom: '6px' }}>{title}</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#1e1e1e' }}>{value}</div>
+            <div style={{ color: '#666', fontSize: '0.9rem' }}>{subtitle}</div>
+        </div>
+    );
+}
+
+function DashboardListCard({ title, children }: { title: string; children: React.ReactNode }) {
+    return (
+        <div style={{
+            background: '#fff',
+            borderRadius: '18px',
+            padding: '16px',
+            border: '1px solid #eee',
+            boxShadow: '0 8px 18px rgba(0,0,0,0.05)',
+            display: 'grid',
+            gap: '12px'
+        }}>
+            <div style={{ fontWeight: 800, color: '#333' }}>{title}</div>
+            {children}
+        </div>
+    );
+}
+
+const dashboardRowStyle: React.CSSProperties = {
+    display: 'grid',
+    gap: '4px',
+    paddingBottom: '10px',
+    borderBottom: '1px solid #f1f1f1',
+    color: '#555'
+};
+
+function formatDateTime(value: string) {
+    return new Date(value).toLocaleString([], {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }

@@ -26,6 +26,11 @@ interface Produto {
     preco: number;
     categoria: string;
     imagem: string; // Emoji
+    disponivel?: boolean;
+    estoqueDisponivel?: boolean;
+    disponivelVenda?: boolean;
+    quantidadeMaximaDisponivel?: number | null;
+    motivoIndisponibilidade?: string | null;
 }
 
 interface ItemPedido {
@@ -115,9 +120,29 @@ export default function TelaPedidos() {
 
     // Adicionar produto ao pedido
     const adicionarProduto = (produto: Produto) => {
+        if (produto.disponivelVenda === false) {
+            setFeedback({
+                open: true,
+                title: 'Produto indisponível',
+                message: produto.motivoIndisponibilidade || 'Esse item está sem insumo suficiente no estoque.',
+                variant: 'info'
+            });
+            return;
+        }
+
         setItensPedido(prev => {
             const existente = prev.find(item => item.produto.id === produto.id);
             if (existente) {
+                const maximo = produto.quantidadeMaximaDisponivel;
+                if (maximo !== null && maximo !== undefined && existente.quantidade >= maximo) {
+                    setFeedback({
+                        open: true,
+                        title: 'Limite de estoque',
+                        message: `Só é possível pedir ${maximo} unidade(s) de ${produto.nome} neste momento.`,
+                        variant: 'info'
+                    });
+                    return prev;
+                }
                 return prev.map(item =>
                     item.produto.id === produto.id
                         ? { ...item, quantidade: item.quantidade + 1 }
@@ -133,6 +158,16 @@ export default function TelaPedidos() {
         setItensPedido(prev => prev.map(item => {
             if (item.produto.id === idProduto) {
                 const novaQtd = item.quantidade + delta;
+                const maximo = item.produto.quantidadeMaximaDisponivel;
+                if (delta > 0 && maximo !== null && maximo !== undefined && novaQtd > maximo) {
+                    setFeedback({
+                        open: true,
+                        title: 'Limite de estoque',
+                        message: `Só é possível pedir ${maximo} unidade(s) de ${item.produto.nome} neste momento.`,
+                        variant: 'info'
+                    });
+                    return item;
+                }
                 return novaQtd > 0 ? { ...item, quantidade: novaQtd } : null;
             }
             return item;
@@ -177,10 +212,11 @@ export default function TelaPedidos() {
                 });
                 setItensPedido([]); // Limpa a comanda
             } else {
+                const erro = await response.text();
                 setFeedback({
                     open: true,
                     title: 'Não foi possível enviar',
-                    message: 'Tente novamente em alguns segundos.',
+                    message: erro || 'Tente novamente em alguns segundos.',
                     variant: 'error'
                 });
             }
@@ -251,10 +287,20 @@ export default function TelaPedidos() {
                                 key={produto.id}
                                 className="product-card"
                                 onClick={() => adicionarProduto(produto)}
+                                style={{
+                                    opacity: produto.disponivelVenda === false ? 0.45 : 1,
+                                    cursor: produto.disponivelVenda === false ? 'not-allowed' : 'pointer',
+                                    position: 'relative'
+                                }}
                             >
                                 <div className="product-img">{produto.imagem}</div>
                                 <div className="product-name">{produto.nome}</div>
                                 <div className="product-price">R$ {produto.preco.toFixed(2)}</div>
+                                {produto.disponivelVenda === false && (
+                                    <div style={{ fontSize: '0.8rem', color: '#B71C1C', marginTop: '8px', fontWeight: 700 }}>
+                                        {produto.motivoIndisponibilidade || 'Sem insumo'}
+                                    </div>
+                                )}
                             </div>
                         ))}
                         {produtosVisiveis.length === 0 && (

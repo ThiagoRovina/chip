@@ -1,7 +1,6 @@
 package com.chipcook.api.produto.service;
 
 import com.chipcook.api.domain.TenantContext;
-import com.chipcook.api.estoque.enums.CategoriaEstoque;
 import com.chipcook.api.estoque.model.EstoqueItem;
 import com.chipcook.api.estoque.repository.EstoqueRepository;
 import com.chipcook.api.estoque.service.EstoqueService;
@@ -16,6 +15,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 @Service
 public class ProdutoService {
@@ -41,19 +41,33 @@ public class ProdutoService {
             criarSeed("X-Bacon", "Hambúrguer com bacon crocante", new BigDecimal("25.00"), "Lanches", "🍔");
             criarSeed("Coca-Cola Lata", "Refrigerante 350ml", new BigDecimal("6.00"), "Bebidas", "🥤");
             criarSeed("Batata Frita", "Porção média", new BigDecimal("15.00"), "Acompanhamentos", "🍟");
-            return produtoRepository.findByTenantId(tenantId);
+            produtos = produtoRepository.findByTenantId(tenantId);
         }
 
         boolean alterado = garantirProdutoCenario(produtos, "Pizza Margherita", "Pizza tradicional preparada com insumos da montagem",
                 new BigDecimal("42.00"), "Pizzas", "🍕");
 
-        return alterado ? produtoRepository.findByTenantId(tenantId) : produtos;
+        List<Produto> produtosProcessados = alterado ? produtoRepository.findByTenantId(tenantId) : produtos;
+        produtosProcessados.forEach(this::enriquecerDisponibilidade);
+        return produtosProcessados;
     }
 
     public Produto buscarPorId(Long id) {
         String tenantId = TenantContext.getTenantId();
-        return produtoRepository.findByIdAndTenantId(id, tenantId)
+        Produto produto = produtoRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+        return enriquecerDisponibilidade(produto);
+    }
+
+    public Produto buscarPorIdParaVenda(Long id) {
+        Produto produto = buscarPorId(id);
+        if (!Boolean.TRUE.equals(produto.getDisponivelVenda())) {
+            String motivo = produto.getMotivoIndisponibilidade() == null || produto.getMotivoIndisponibilidade().isBlank()
+                    ? "Produto indisponível para venda"
+                    : produto.getMotivoIndisponibilidade();
+            throw new IllegalArgumentException(motivo);
+        }
+        return produto;
     }
 
     public Produto salvar(Produto produto) {
@@ -165,15 +179,9 @@ public class ProdutoService {
             return null;
         }
 
-        List<EstoqueItem> encontrados = estoqueRepository.findByTenantIdAndNomeIgnoreCase(tenantId, nomeIngrediente.trim());
-        if (encontrados.isEmpty()) {
-            throw new IllegalArgumentException("Ingrediente não encontrado no estoque");
-        }
-
-        return encontrados.stream()
-                .filter(item -> item.getCategoriaEstoque() == CategoriaEstoque.PORCAO)
+        return estoqueRepository.findByTenantIdAndNomeIgnoreCase(tenantId, nomeIngrediente.trim()).stream()
                 .findFirst()
-                .orElse(encontrados.get(0));
+                .orElseThrow(() -> new IllegalArgumentException("Ingrediente não encontrado no estoque"));
     }
 
     private ProdutoIngrediente criarIngredienteSeed(String nomeItemEstoque, Double quantidade) {
@@ -181,5 +189,73 @@ public class ProdutoService {
         ingrediente.setNomeItemEstoque(nomeItemEstoque);
         ingrediente.setQuantidade(quantidade);
         return ingrediente;
+    }
+
+    public Produto enriquecerDisponibilidade(Produto produto) {
+        if (produto == null) {
+            return null;
+        }
+
+        boolean estoqueDisponivel = true;
+        Integer quantidadeMaximaDisponivel = null;
+        String motivoIndisponibilidade = null;
+
+        if (produto.getIngredientes() != null && !produto.getIngredientes().isEmpty()) {
+            int capacidade = Integer.MAX_VALUE;
+
+            for (ProdutoIngrediente ingrediente : produto.getIngredientes()) {
+                if (ingrediente == null) {
+                    continue;
+                }
+
+                Optional<EstoqueItem> itemEstoque = localizarItemEstoque(ingrediente);
+                double quantidadePorProduto = ingrediente.getQuantidade() == null || ingrediente.getQuantidade() <= 0
+                        ? 1.0
+                        : ingrediente.getQuantidade();
+
+                if (itemEstoque.isEmpty()) {
+                    estoqueDisponivel = false;
+                    capacidade = 0;
+                    motivoIndisponibilidade = "Ingrediente " + ingrediente.getNomeItemEstoque() + " não encontrado no estoque";
+                    break;
+                }
+
+                double quantidadeAtual = itemEstoque.get().getQuantidade() == null ? 0.0 : itemEstoque.get().getQuantidade();
+                int capacidadeIngrediente = (int) Math.floor(quantidadeAtual / quantidadePorProduto);
+                capacidade = Math.min(capacidade, capacidadeIngrediente);
+
+                if (capacidadeIngrediente <= 0 && motivoIndisponibilidade == null) {
+                    motivoIndisponibilidade = "Falta " + itemEstoque.get().getNome() + " no estoque";
+                }
+            }
+
+            quantidadeMaximaDisponivel = capacidade == Integer.MAX_VALUE ? 0 : Math.max(capacidade, 0);
+            estoqueDisponivel = quantidadeMaximaDisponivel > 0;
+        }
+
+        boolean disponivelConfigurado = Boolean.TRUE.equals(produto.getDisponivel());
+        produto.setEstoqueDisponivel(estoqueDisponivel);
+        produto.setDisponivelVenda(disponivelConfigurado && estoqueDisponivel);
+        produto.setQuantidadeMaximaDisponivel(quantidadeMaximaDisponivel);
+        produto.setMotivoIndisponibilidade(
+                !disponivelConfigurado ? "Produto marcado como indisponível no cardápio" : motivoIndisponibilidade
+        );
+        return produto;
+    }
+
+    private Optional<EstoqueItem> localizarItemEstoque(ProdutoIngrediente ingrediente) {
+        String tenantId = TenantContext.getTenantId();
+
+        if (ingrediente.getEstoqueItemId() != null) {
+            return estoqueRepository.findByIdAndTenantId(ingrediente.getEstoqueItemId(), tenantId);
+        }
+
+        if (ingrediente.getNomeItemEstoque() == null || ingrediente.getNomeItemEstoque().isBlank()) {
+            return Optional.empty();
+        }
+
+        return estoqueRepository.findByTenantIdAndNomeIgnoreCase(tenantId, ingrediente.getNomeItemEstoque().trim())
+                .stream()
+                .findFirst();
     }
 }

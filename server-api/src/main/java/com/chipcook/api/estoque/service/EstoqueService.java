@@ -3,18 +3,24 @@ package com.chipcook.api.estoque.service;
 import com.chipcook.api.domain.TenantContext;
 import com.chipcook.api.estoque.dto.ConsumoInternoDTO;
 import com.chipcook.api.estoque.dto.ConsumoMontagemDTO;
+import com.chipcook.api.estoque.dto.EstoqueDashboardDTO;
+import com.chipcook.api.estoque.dto.ItemAlertaEstoqueDTO;
+import com.chipcook.api.estoque.dto.MovimentacaoResumoDTO;
 import com.chipcook.api.estoque.dto.MovimentacaoDTO;
 import com.chipcook.api.estoque.dto.ProducaoPorcaoDTO;
 import com.chipcook.api.estoque.dto.TransferenciaEstoqueDTO;
 import com.chipcook.api.estoque.enums.CategoriaEstoque;
 import com.chipcook.api.estoque.enums.PerfilOperacionalEstoque;
+import com.chipcook.api.estoque.model.EstoqueMovimentacao;
 import com.chipcook.api.estoque.model.EstoqueItem;
+import com.chipcook.api.estoque.repository.EstoqueMovimentacaoRepository;
 import com.chipcook.api.estoque.repository.EstoqueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -30,6 +36,7 @@ public class EstoqueService {
     );
 
     private final EstoqueRepository estoqueRepository;
+    private final EstoqueMovimentacaoRepository estoqueMovimentacaoRepository;
 
     public List<EstoqueItem> listarItens() {
         return garantirItensCenario();
@@ -117,14 +124,16 @@ public class EstoqueService {
         String tipo = normalizarTipoMovimentacao(dto.getTipo());
 
         switch (tipo) {
-            case "entrada" -> item.setQuantidade(item.getQuantidade() + dto.getQuantidade());
+            case "entrada" -> item.setQuantidade((item.getQuantidade() == null ? 0.0 : item.getQuantidade()) + dto.getQuantidade());
             case "saida" -> retirarQuantidade(item, dto.getQuantidade(), "Estoque insuficiente para saída");
             case "perda" -> retirarQuantidade(item, dto.getQuantidade(), "Estoque insuficiente para perda");
             case "contagem" -> item.setQuantidade(dto.getQuantidade());
             default -> throw new IllegalArgumentException("Tipo de movimentação inválido");
         }
 
-        return estoqueRepository.save(item);
+        EstoqueItem salvo = estoqueRepository.save(item);
+        registrarMovimentacao(salvo, tipo, dto.getQuantidade(), dto.getMotivo(), salvo.getCategoriaEstoque(), salvo.getCategoriaEstoque());
+        return salvo;
     }
 
     @Transactional
@@ -152,10 +161,15 @@ public class EstoqueService {
             validarAcessoCategoria(perfil, itemInterno.getCategoriaEstoque());
             retirarQuantidade(itemInterno, consumo.getQuantidade(), "Estoque interno insuficiente para produção");
             estoqueRepository.save(itemInterno);
+            registrarMovimentacao(itemInterno, "consumo_producao", consumo.getQuantidade(), null,
+                    itemInterno.getCategoriaEstoque(), itemPorcao.getCategoriaEstoque());
         }
 
-        itemPorcao.setQuantidade(itemPorcao.getQuantidade() + dto.getQuantidadeProduzida());
-        return estoqueRepository.save(itemPorcao);
+        itemPorcao.setQuantidade((itemPorcao.getQuantidade() == null ? 0.0 : itemPorcao.getQuantidade()) + dto.getQuantidadeProduzida());
+        EstoqueItem salvo = estoqueRepository.save(itemPorcao);
+        registrarMovimentacao(salvo, "producao", dto.getQuantidadeProduzida(), null,
+                salvo.getCategoriaEstoque(), salvo.getCategoriaEstoque());
+        return salvo;
     }
 
     @Transactional
@@ -173,7 +187,10 @@ public class EstoqueService {
         validarAcessoCategoria(perfil, itemPorcao.getCategoriaEstoque());
         retirarQuantidade(itemPorcao, dto.getQuantidade(), "Estoque de porção insuficiente para montagem");
 
-        return estoqueRepository.save(itemPorcao);
+        EstoqueItem salvo = estoqueRepository.save(itemPorcao);
+        registrarMovimentacao(salvo, "consumo_montagem", dto.getQuantidade(), null,
+                salvo.getCategoriaEstoque(), null);
+        return salvo;
     }
 
     @Transactional
@@ -204,6 +221,52 @@ public class EstoqueService {
         double quantidadeAtualDestino = itemDestino.getQuantidade() == null ? 0.0 : itemDestino.getQuantidade();
         itemDestino.setQuantidade(quantidadeAtualDestino + dto.getQuantidade());
         estoqueRepository.save(itemDestino);
+
+        registrarMovimentacao(itemOrigem, "transferencia", dto.getQuantidade(), null,
+                itemOrigem.getCategoriaEstoque(), categoriaDestino);
+    }
+
+    public EstoqueDashboardDTO montarDashboard() {
+        List<EstoqueItem> itens = listarItens();
+        String tenantId = TenantContext.getTenantId();
+        LocalDateTime seteDiasAtras = LocalDateTime.now().minusDays(7);
+
+        List<EstoqueItem> itensAbaixoMinimo = itens.stream()
+                .filter(item -> "baixo".equals(item.getStatus()))
+                .toList();
+
+        List<EstoqueItem> itensVencendo = itens.stream()
+                .filter(item -> "vencendo".equals(item.getStatus()))
+                .toList();
+
+        return EstoqueDashboardDTO.builder()
+                .itensAbaixoMinimo(itensAbaixoMinimo.size())
+                .itensVencendo(itensVencendo.size())
+                .perdasUltimos7Dias(estoqueMovimentacaoRepository.countByTenantIdAndTipoAndDataHoraAfter(tenantId, "perda", seteDiasAtras))
+                .quantidadePerdidaUltimos7Dias(valorOuZero(estoqueMovimentacaoRepository.somarQuantidadePorTipoDesde(tenantId, "perda", seteDiasAtras)))
+                .transferenciasUltimos7Dias(estoqueMovimentacaoRepository.countByTenantIdAndTipoAndDataHoraAfter(tenantId, "transferencia", seteDiasAtras))
+                .quantidadeTransferidaUltimos7Dias(valorOuZero(estoqueMovimentacaoRepository.somarQuantidadePorTipoDesde(tenantId, "transferencia", seteDiasAtras)))
+                .reposicoesPendentes(itensAbaixoMinimo.stream().limit(8).map(this::mapearAlertaItem).toList())
+                .perdasRecentes(estoqueMovimentacaoRepository.findTop10ByTenantIdAndTipoOrderByDataHoraDesc(tenantId, "perda").stream()
+                        .map(this::mapearMovimentacaoResumo)
+                        .toList())
+                .transferenciasRecentes(estoqueMovimentacaoRepository.findTop10ByTenantIdAndTipoOrderByDataHoraDesc(tenantId, "transferencia").stream()
+                        .map(this::mapearMovimentacaoResumo)
+                        .toList())
+                .build();
+    }
+
+    @Transactional
+    public EstoqueItem baixarParaPedido(Long itemId, Double quantidade, String motivo) {
+        validarQuantidadePositiva(quantidade, "Quantidade consumida no pedido deve ser maior que zero");
+
+        EstoqueItem item = buscarPorId(itemId);
+        retirarQuantidade(item, quantidade, "Estoque insuficiente para finalizar o pedido");
+
+        EstoqueItem salvo = estoqueRepository.save(item);
+        registrarMovimentacao(salvo, "consumo_pedido", quantidade, motivo,
+                salvo.getCategoriaEstoque(), null);
+        return salvo;
     }
 
     private void validarOperacaoGerencial(PerfilOperacionalEstoque perfil) {
@@ -342,5 +405,50 @@ public class EstoqueService {
         }
 
         return false;
+    }
+
+    private void registrarMovimentacao(EstoqueItem item,
+                                       String tipo,
+                                       Double quantidade,
+                                       String motivo,
+                                       CategoriaEstoque categoriaOrigem,
+                                       CategoriaEstoque categoriaDestino) {
+        EstoqueMovimentacao movimentacao = new EstoqueMovimentacao();
+        movimentacao.setItemId(item.getId());
+        movimentacao.setItemNome(item.getNome());
+        movimentacao.setTipo(tipo);
+        movimentacao.setQuantidade(quantidade);
+        movimentacao.setMotivo(motivo);
+        movimentacao.setCategoriaOrigem(categoriaOrigem);
+        movimentacao.setCategoriaDestino(categoriaDestino);
+        estoqueMovimentacaoRepository.save(movimentacao);
+    }
+
+    private ItemAlertaEstoqueDTO mapearAlertaItem(EstoqueItem item) {
+        return ItemAlertaEstoqueDTO.builder()
+                .itemId(item.getId())
+                .nome(item.getNome())
+                .categoriaEstoque(item.getCategoriaEstoque().getDescricao())
+                .quantidadeAtual(item.getQuantidade() == null ? 0.0 : item.getQuantidade())
+                .estoqueMinimo(item.getEstoqueMinimo() == null ? 0.0 : item.getEstoqueMinimo())
+                .unidade(item.getUnidade())
+                .status(item.getStatus())
+                .build();
+    }
+
+    private MovimentacaoResumoDTO mapearMovimentacaoResumo(EstoqueMovimentacao movimentacao) {
+        return MovimentacaoResumoDTO.builder()
+                .itemNome(movimentacao.getItemNome())
+                .tipo(movimentacao.getTipo())
+                .quantidade(movimentacao.getQuantidade() == null ? 0.0 : movimentacao.getQuantidade())
+                .motivo(movimentacao.getMotivo())
+                .categoriaOrigem(movimentacao.getCategoriaOrigem() == null ? null : movimentacao.getCategoriaOrigem().getDescricao())
+                .categoriaDestino(movimentacao.getCategoriaDestino() == null ? null : movimentacao.getCategoriaDestino().getDescricao())
+                .dataHora(movimentacao.getDataHora())
+                .build();
+    }
+
+    private double valorOuZero(Double valor) {
+        return valor == null ? 0.0 : valor;
     }
 }

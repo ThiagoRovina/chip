@@ -63,6 +63,20 @@ interface Receita {
     passos: PassoReceita[];
 }
 
+interface ProdutoReceitaResponse {
+    id: number;
+    nome: string;
+    ingredientes?: Array<{
+        nomeItemEstoque: string;
+        quantidade: number;
+        unidade: string;
+    }>;
+    passos?: Array<{
+        descricao: string;
+        tempoSegundos: number;
+    }>;
+}
+
 // Mock de Receitas (Mantido local por enquanto)
 const MOCK_RECEITAS: Record<string, Receita> = {
     'X-Bacon': {
@@ -315,7 +329,45 @@ export default function TelaCozinha() {
 
     // --- Lógica da Receita ---
 
-    const abrirReceita = (item: ItemPedido) => {
+    const abrirReceita = async (item: ItemPedido) => {
+        if (item.produtoId) {
+            try {
+                const response = await fetch(buildApiUrl(`/api/produtos/${item.produtoId}`), {
+                    headers: withTenantHeader()
+                });
+
+                if (response.ok) {
+                    const produto: ProdutoReceitaResponse = await response.json();
+                    const receitaApi: Receita = {
+                        nome: produto.nome,
+                        ingredientes: produto.ingredientes?.length
+                            ? produto.ingredientes.map(ingrediente => (
+                                `${ingrediente.quantidade} ${ingrediente.unidade} de ${ingrediente.nomeItemEstoque}`
+                            ))
+                            : item.ingredientes.map(ingrediente => (
+                                `${ingrediente.quantidadeNecessaria} ${ingrediente.unidade} de ${ingrediente.nome}`
+                            )),
+                        passos: produto.passos?.length
+                            ? produto.passos.map(passo => ({
+                                descricao: passo.descricao,
+                                tempoSegundos: passo.tempoSegundos || 0
+                            }))
+                            : DEFAULT_RECEITA.passos
+                    };
+
+                    setReceitaAtiva(receitaApi);
+                    setPassoAtual(0);
+                    setTempoRestante(receitaApi.passos[0].tempoSegundos);
+                    setTimerRodando(false);
+                    setPassoConcluido(false);
+                    stopAlarm();
+                    return;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar ficha técnica:', error);
+            }
+        }
+
         const receitaMock = MOCK_RECEITAS[item.nomeProduto];
         const receita = receitaMock || {
             ...DEFAULT_RECEITA,

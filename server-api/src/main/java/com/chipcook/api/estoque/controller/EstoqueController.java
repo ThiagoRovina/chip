@@ -1,6 +1,7 @@
 package com.chipcook.api.estoque.controller;
 
 import com.chipcook.api.estoque.dto.ConsumoMontagemDTO;
+import com.chipcook.api.estoque.dto.EstoqueDashboardDTO;
 import com.chipcook.api.estoque.dto.MovimentacaoDTO;
 import com.chipcook.api.estoque.dto.ProducaoPorcaoDTO;
 import com.chipcook.api.estoque.dto.TransferenciaEstoqueDTO;
@@ -31,6 +32,11 @@ public class EstoqueController {
             }
         }
         return ResponseEntity.ok(estoqueService.listarItens());
+    }
+
+    @GetMapping("/dashboard")
+    public ResponseEntity<EstoqueDashboardDTO> dashboard() {
+        return ResponseEntity.ok(estoqueService.montarDashboard());
     }
 
     @GetMapping("/{id}")
