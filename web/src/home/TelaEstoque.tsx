@@ -575,7 +575,8 @@ export default function TelaEstoque() {
                                                 type="number"
                                                 value={itemForm.quantidade}
                                                 onChange={(e) => setItemForm({ ...itemForm, quantidade: parseFloat(e.target.value || '0') })}
-                                                step="0.01"
+                                                min="0"
+                                                step="1"
                                             />
                                         </div>
                                         <div className="form-group">
