@@ -23,32 +23,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-
-                        .requestMatchers(HttpMethod.POST, "/api/usuario/registrar").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/usuario/login").permitAll()
-                        .requestMatchers(HttpMethod.DELETE, "/api/usuario/**").permitAll()
-                        .requestMatchers(HttpMethod.PUT, "/api/usuario/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/usuario/**").permitAll()
-
-                        .requestMatchers(HttpMethod.POST, "/api/estoque/**").permitAll()
-                        .requestMatchers(HttpMethod.PUT, "/api/estoque/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/estoque/**").permitAll()
-
-                        .requestMatchers(HttpMethod.POST, "/api/pedidos/**").permitAll()
-                        .requestMatchers(HttpMethod.PUT, "/api/pedidos/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/pedidos/**").permitAll()
-
-                        .requestMatchers(HttpMethod.GET, "/api/funcionario/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/tenant/current").permitAll()
-                        .requestMatchers("/api/admin/tenants", "/api/admin/tenants/**").permitAll()
-
-                        .requestMatchers(HttpMethod.POST, "/api/produtos/**").permitAll()
-                        .requestMatchers(HttpMethod.PUT, "/api/produtos/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/produtos/**").permitAll()
-                        .requestMatchers(HttpMethod.DELETE, "/api/produtos/**").permitAll()
-
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll()
                 );
 
         return http.build();
