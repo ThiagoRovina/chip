@@ -3,6 +3,7 @@ package com.chipcook.api.estoque.controller;
 import com.chipcook.api.estoque.dto.ConsumoMontagemDTO;
 import com.chipcook.api.estoque.dto.MovimentacaoDTO;
 import com.chipcook.api.estoque.dto.ProducaoPorcaoDTO;
+import com.chipcook.api.estoque.dto.TransferenciaEstoqueDTO;
 import com.chipcook.api.estoque.enums.CategoriaEstoque;
 import com.chipcook.api.estoque.model.EstoqueItem;
 import com.chipcook.api.estoque.service.EstoqueService;
@@ -91,6 +92,16 @@ public class EstoqueController {
     public ResponseEntity<?> registrarConsumoMontagem(@RequestBody ConsumoMontagemDTO dto) {
         try {
             return ResponseEntity.ok(estoqueService.registrarConsumoMontagem(dto));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/transferencias")
+    public ResponseEntity<?> transferirEntreEstoques(@RequestBody TransferenciaEstoqueDTO dto) {
+        try {
+            estoqueService.transferirDoEstoqueGeral(dto);
+            return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

@@ -5,6 +5,7 @@ import com.chipcook.api.estoque.dto.ConsumoInternoDTO;
 import com.chipcook.api.estoque.dto.ConsumoMontagemDTO;
 import com.chipcook.api.estoque.dto.MovimentacaoDTO;
 import com.chipcook.api.estoque.dto.ProducaoPorcaoDTO;
+import com.chipcook.api.estoque.dto.TransferenciaEstoqueDTO;
 import com.chipcook.api.estoque.enums.CategoriaEstoque;
 import com.chipcook.api.estoque.enums.PerfilOperacionalEstoque;
 import com.chipcook.api.estoque.model.EstoqueItem;
@@ -175,6 +176,36 @@ public class EstoqueService {
         return estoqueRepository.save(itemPorcao);
     }
 
+    @Transactional
+    public void transferirDoEstoqueGeral(TransferenciaEstoqueDTO dto) {
+        validarQuantidadePositiva(dto.getQuantidade(), "Quantidade transferida deve ser maior que zero");
+
+        PerfilOperacionalEstoque perfil = PerfilOperacionalEstoque.from(dto.getPerfil());
+        validarOperacaoGerencial(perfil);
+
+        EstoqueItem itemOrigem = buscarPorId(dto.getItemOrigemId());
+        if (itemOrigem.getCategoriaEstoque() != CategoriaEstoque.GERAL) {
+            throw new IllegalArgumentException("A transferência só pode sair do estoque geral");
+        }
+
+        CategoriaEstoque categoriaDestino = CategoriaEstoque.from(dto.getCategoriaDestino());
+        if (categoriaDestino == CategoriaEstoque.GERAL) {
+            throw new IllegalArgumentException("Selecione um estoque de destino diferente do geral");
+        }
+
+        retirarQuantidade(itemOrigem, dto.getQuantidade(), "Estoque geral insuficiente para transferência");
+        estoqueRepository.save(itemOrigem);
+
+        String tenantId = TenantContext.getTenantId();
+        EstoqueItem itemDestino = estoqueRepository
+                .findByTenantIdAndNomeIgnoreCaseAndCategoriaEstoque(tenantId, itemOrigem.getNome(), categoriaDestino)
+                .orElseGet(() -> criarItemDestinoTransferencia(itemOrigem, categoriaDestino));
+
+        double quantidadeAtualDestino = itemDestino.getQuantidade() == null ? 0.0 : itemDestino.getQuantidade();
+        itemDestino.setQuantidade(quantidadeAtualDestino + dto.getQuantidade());
+        estoqueRepository.save(itemDestino);
+    }
+
     private void validarOperacaoGerencial(PerfilOperacionalEstoque perfil) {
         if (!PERFIS_GERENCIAIS.contains(perfil)) {
             throw new IllegalArgumentException("Operação permitida apenas para dono, gerente ou chefe de cozinha");
@@ -224,6 +255,29 @@ public class EstoqueService {
             throw new IllegalArgumentException("Tipo de movimentação é obrigatório");
         }
         return tipo.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private EstoqueItem criarItemDestinoTransferencia(EstoqueItem origem, CategoriaEstoque categoriaDestino) {
+        EstoqueItem destino = new EstoqueItem();
+        destino.setNome(origem.getNome());
+        destino.setQuantidade(0.0);
+        destino.setUnidade(origem.getUnidade());
+        destino.setValidade(origem.getValidade());
+        destino.setCategoria(origem.getCategoria());
+        destino.setImagem(origem.getImagem());
+        destino.setCategoriaEstoque(categoriaDestino);
+        destino.setEstoqueMinimo(origem.getEstoqueMinimo());
+        destino.setLocalizacao(localizacaoPadraoCategoria(categoriaDestino));
+        return estoqueRepository.save(destino);
+    }
+
+    private String localizacaoPadraoCategoria(CategoriaEstoque categoriaDestino) {
+        return switch (categoriaDestino) {
+            case INTERNO -> "Área Interna";
+            case PORCAO_GERAL -> "Área de Produção";
+            case PORCAO -> "Área de Montagem";
+            case GERAL -> "Depósito Geral";
+        };
     }
 
     private void seedItensIniciais() {

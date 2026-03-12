@@ -20,7 +20,11 @@ public class EstoqueItem {
     private String unidade; // kg, un, l
     private LocalDate validade;
     private String categoria; // Frios, Hortifruti, etc.
-    private String imagem; // Emoji ou URL
+
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String imagem; // Emoji, URL ou base64
+
     private String status; // ok, baixo, vencendo
 
     @Enumerated(EnumType.STRING)

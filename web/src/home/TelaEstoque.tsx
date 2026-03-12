@@ -69,6 +69,7 @@ export default function TelaEstoque() {
     const [motivoPerda, setMotivoPerda] = useState<string>('');
     const [consumoInternoId, setConsumoInternoId] = useState<number | null>(null);
     const [quantidadeConsumo, setQuantidadeConsumo] = useState<number>(1);
+    const [categoriaDestinoTransferencia, setCategoriaDestinoTransferencia] = useState<CategoriaEstoque>('porcao');
 
     const [itemForm, setItemForm] = useState({
         nome: '',
@@ -136,6 +137,7 @@ export default function TelaEstoque() {
         setMotivoPerda('');
         setConsumoInternoId(null);
         setQuantidadeConsumo(1);
+        setCategoriaDestinoTransferencia('porcao');
     };
 
     const resetItemForm = () => {
@@ -195,6 +197,8 @@ export default function TelaEstoque() {
     const itensProducao = visibleItems.filter(i => i.categoriaEstoque === 'porcao_geral' || i.categoriaEstoque === 'porcao');
     const itensMontagem = itensProducao;
     const insumosInternos = visibleItems.filter(i => i.categoriaEstoque === 'interno');
+    const itensEstoqueGeral = visibleItems.filter(i => i.categoriaEstoque === 'geral');
+    const categoriasTransferencia = categorias.filter(cat => cat.value !== 'geral');
 
     const getModalTitle = () => {
         switch (modalOpen) {
@@ -204,6 +208,7 @@ export default function TelaEstoque() {
             case 'contagem': return 'O que você vai contar?';
             case 'producao': return 'Registrar Produção';
             case 'montagem': return 'Baixa na Montagem';
+            case 'transferencia': return 'Enviar do Estoque Geral';
             case 'novo': return 'Novo Produto';
             case 'editar': return 'Editar Produto';
             default: return '';
@@ -218,6 +223,7 @@ export default function TelaEstoque() {
             case 'contagem': return 'var(--stock-purple)';
             case 'producao': return '#7A4B2A';
             case 'montagem': return '#5A8F2C';
+            case 'transferencia': return '#1565C0';
             case 'novo':
             case 'editar': return '#FF9800';
             default: return '#333';
@@ -325,6 +331,41 @@ export default function TelaEstoque() {
         closeModal();
     };
 
+    const postTransferencia = async () => {
+        if (selectedItemId === null) {
+            openFeedback('Selecione um item', 'Escolha o produto que vai sair do estoque geral.', 'info');
+            return;
+        }
+
+        const item = items.find(i => i.id === selectedItemId);
+        const destino = categorias.find(cat => cat.value === categoriaDestinoTransferencia);
+
+        const response = await fetch(buildApiUrl('/api/estoque/transferencias'), {
+            method: 'POST',
+            headers: withTenantHeader({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+                itemOrigemId: selectedItemId,
+                categoriaDestino: categoriaDestinoTransferencia,
+                quantidade,
+                perfil: perfilOperacional
+            })
+        });
+
+        if (!response.ok) {
+            const erro = await responseErrorText(response, 'Falha ao transferir o item.');
+            openFeedback('Não foi possível transferir', erro, 'error');
+            return;
+        }
+
+        openFeedback(
+            'Transferência registrada',
+            `${quantidade} ${item?.unidade} de ${item?.nome} enviado para ${destino?.label?.toLowerCase()}.`,
+            'success'
+        );
+        await fetchEstoque();
+        closeModal();
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -363,6 +404,11 @@ export default function TelaEstoque() {
 
             if (modalOpen === 'montagem') {
                 await postMontagem();
+                return;
+            }
+
+            if (modalOpen === 'transferencia') {
+                await postTransferencia();
                 return;
             }
 
@@ -408,6 +454,7 @@ export default function TelaEstoque() {
     const itensSelecaoModal =
         modalOpen === 'producao' ? itensProducao :
             modalOpen === 'montagem' ? itensMontagem :
+                modalOpen === 'transferencia' ? itensEstoqueGeral :
                 itemsDaCategoria;
 
     return (
@@ -474,6 +521,12 @@ export default function TelaEstoque() {
                         <UtensilsCrossed size={48} />
                         BAIXA NA<br />MONTAGEM
                     </button>
+                    {allowedCategories.includes('geral') && (
+                        <button className="action-btn btn-entry" onClick={() => handleAction('transferencia')}>
+                            <PackagePlus size={48} />
+                            ENVIAR DO<br />GERAL
+                        </button>
+                    )}
                 </section>
 
                 <section style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
@@ -691,6 +744,20 @@ export default function TelaEstoque() {
 
                                     {selectedItemId !== null && (
                                         <>
+                                            {modalOpen === 'transferencia' && (
+                                                <div className="form-group">
+                                                    <label style={{ fontSize: '1.1rem' }}>Enviar para qual estoque?</label>
+                                                    <select
+                                                        value={categoriaDestinoTransferencia}
+                                                        onChange={(e) => setCategoriaDestinoTransferencia(e.target.value as CategoriaEstoque)}
+                                                    >
+                                                        {categoriasTransferencia.map(cat => (
+                                                            <option key={cat.value} value={cat.value}>{cat.label}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            )}
+
                                             {modalOpen === 'producao' && (
                                                 <div className="form-group">
                                                     <label style={{ fontSize: '1.1rem' }}>Insumo interno consumido (opcional)</label>

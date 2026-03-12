@@ -21,7 +21,11 @@ public class Produto {
     private String descricao;
     private BigDecimal preco;
     private String categoria; // Bebidas, Lanches, Sobremesas
-    private String imagem; // URL ou Emoji
+
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String imagem; // URL, emoji ou base64
+
     private Boolean disponivel;
 
     @ElementCollection(fetch = FetchType.LAZY)
