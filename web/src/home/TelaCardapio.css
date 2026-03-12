@@ -1,0 +1,202 @@
+.cardapio-page {
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at top left, rgba(255, 214, 153, 0.4), transparent 30%),
+        linear-gradient(135deg, #f7f1e8 0%, #fffaf4 45%, #efe3d3 100%);
+}
+
+.cardapio-content {
+    display: grid;
+    grid-template-columns: 1.05fr 1.35fr;
+    gap: 24px;
+    padding: 24px;
+}
+
+.cardapio-list-panel,
+.cardapio-form-panel {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(91, 58, 41, 0.12);
+    border-radius: 24px;
+    box-shadow: 0 20px 50px rgba(91, 58, 41, 0.12);
+    padding: 24px;
+}
+
+.section-header,
+.subsection-header,
+.produto-card-top,
+.produto-actions,
+.form-footer,
+.step-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.eyebrow {
+    margin: 0 0 4px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #9a5b2c;
+}
+
+.section-header h1,
+.section-header h2,
+.subsection-header h3,
+.produto-card h3 {
+    margin: 0;
+}
+
+.primary-action,
+.produto-actions button,
+.subsection-header button,
+.dynamic-row button,
+.step-card-header button {
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+}
+
+.primary-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #9a5b2c;
+    color: #fff;
+    padding: 12px 16px;
+    font-weight: 700;
+}
+
+.produto-list,
+.dynamic-list,
+.dynamic-steps,
+.produto-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.produto-card {
+    border: 1px solid #ecd8c2;
+    border-radius: 20px;
+    padding: 18px;
+    background: #fffdf8;
+}
+
+.produto-card.selected {
+    border-color: #9a5b2c;
+    box-shadow: 0 10px 24px rgba(154, 91, 44, 0.12);
+}
+
+.produto-emoji {
+    font-size: 2rem;
+}
+
+.produto-card p,
+.produto-meta {
+    margin: 0;
+    color: #6f6257;
+}
+
+.produto-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+    font-size: 0.92rem;
+}
+
+.produto-actions button,
+.subsection-header button,
+.dynamic-row button,
+.step-card-header button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #f4ebe1;
+    color: #5b3a29;
+    padding: 10px 12px;
+}
+
+.produto-actions {
+    margin-top: 16px;
+}
+
+.produto-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: #4e3f34;
+    font-weight: 600;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.produto-form input,
+.produto-form textarea {
+    width: 100%;
+    border: 1px solid #dbc4ae;
+    border-radius: 14px;
+    padding: 12px 14px;
+    font: inherit;
+    background: #fff;
+    box-sizing: border-box;
+}
+
+.toggle-field {
+    flex-direction: row !important;
+    align-items: center;
+    gap: 10px;
+}
+
+.toggle-field input {
+    width: auto;
+}
+
+.form-section {
+    border-top: 1px solid #eee0d1;
+    padding-top: 16px;
+}
+
+.dynamic-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+}
+
+.step-card {
+    background: #fffaf4;
+    border: 1px solid #ecd8c2;
+    border-radius: 18px;
+    padding: 16px;
+}
+
+.hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #6f6257;
+    font-size: 0.92rem;
+}
+
+.empty-state {
+    display: grid;
+    place-items: center;
+    min-height: 220px;
+    border: 1px dashed #d8bea7;
+    border-radius: 20px;
+    color: #7f6f61;
+}
+
+@media (max-width: 980px) {
+    .cardapio-content {
+        grid-template-columns: 1fr;
+    }
+}
