@@ -8,6 +8,15 @@ import lombok.Data;
 @Embeddable
 public class ProdutoIngrediente {
 
+    @Column(name = "estoque_item_id")
+    private Long estoqueItemId;
+
     @Column(name = "ingrediente")
-    private String valor;
+    private String nomeItemEstoque;
+
+    @Column(name = "quantidade")
+    private Double quantidade;
+
+    @Column(name = "unidade")
+    private String unidade;
 }

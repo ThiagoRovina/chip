@@ -140,6 +140,7 @@
 }
 
 .produto-form input,
+.produto-form select,
 .produto-form textarea {
     width: 100%;
     border: 1px solid #dbc4ae;
@@ -171,6 +172,10 @@
     gap: 12px;
 }
 
+.dynamic-row-ingrediente {
+    grid-template-columns: minmax(0, 1.8fr) 120px 110px auto;
+}
+
 .step-card {
     background: #fffaf4;
     border: 1px solid #ecd8c2;
@@ -197,6 +202,10 @@
 
 @media (max-width: 980px) {
     .cardapio-content {
+        grid-template-columns: 1fr;
+    }
+
+    .dynamic-row-ingrediente {
         grid-template-columns: 1fr;
     }
 }

@@ -8,7 +8,10 @@ import FeedbackModal from '../components/FeedbackModal';
 import './TelaCardapio.css';
 
 interface ProdutoIngrediente {
-    valor: string;
+    estoqueItemId?: number;
+    nomeItemEstoque: string;
+    quantidade: number;
+    unidade: string;
 }
 
 interface ProdutoPasso {
@@ -29,6 +32,14 @@ interface Produto {
     passos: ProdutoPasso[];
 }
 
+interface EstoqueItem {
+    id: number;
+    nome: string;
+    unidade: string;
+    categoriaEstoque: string;
+    quantidade: number;
+}
+
 const createEmptyProduto = (): Produto => ({
     nome: '',
     descricao: '',
@@ -36,7 +47,7 @@ const createEmptyProduto = (): Produto => ({
     categoria: 'Lanches',
     imagem: '🍽️',
     disponivel: true,
-    ingredientes: [{ valor: '' }],
+    ingredientes: [{ nomeItemEstoque: '', quantidade: 1, unidade: '' }],
     passos: [{ descricao: '', tempoSegundos: 0, videoUrl: '' }]
 });
 
@@ -45,6 +56,7 @@ export default function TelaCardapio() {
     const { user, logout } = useAuth();
     const [tenantName, setTenantName] = useState(' ');
     const [produtos, setProdutos] = useState<Produto[]>([]);
+    const [estoqueItems, setEstoqueItems] = useState<EstoqueItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -60,6 +72,7 @@ export default function TelaCardapio() {
 
     useEffect(() => {
         fetchTenantInfo();
+        fetchEstoque();
         fetchProdutos();
     }, []);
 
@@ -100,6 +113,27 @@ export default function TelaCardapio() {
         }
     };
 
+    const fetchEstoque = async () => {
+        try {
+            const response = await fetch(buildApiUrl('/api/estoque'), {
+                headers: withTenantHeader()
+            });
+            if (!response.ok) {
+                throw new Error('Falha ao buscar estoque');
+            }
+            const data = await response.json();
+            setEstoqueItems(data);
+        } catch (error) {
+            console.error('Erro ao buscar estoque:', error);
+            setFeedback({
+                open: true,
+                title: 'Estoque indisponível',
+                message: 'Não foi possível carregar os ingredientes do estoque.',
+                variant: 'error'
+            });
+        }
+    };
+
     const handleLogout = () => {
         logout();
         navigate('/login');
@@ -114,15 +148,30 @@ export default function TelaCardapio() {
         setForm(prev => ({ ...prev, [field]: value }));
     };
 
-    const updateIngrediente = (index: number, value: string) => {
+    const updateIngrediente = (index: number, value: number | string, field: keyof ProdutoIngrediente) => {
         setForm(prev => ({
             ...prev,
-            ingredientes: prev.ingredientes.map((item, idx) => idx === index ? { valor: value } : item)
+            ingredientes: prev.ingredientes.map((item, idx) => {
+                if (idx !== index) return item;
+
+                if (field === 'estoqueItemId') {
+                    const selectedId = Number(value);
+                    const estoqueItem = estoqueItems.find(estoque => estoque.id === selectedId);
+                    return {
+                        ...item,
+                        estoqueItemId: Number.isFinite(selectedId) && selectedId > 0 ? selectedId : undefined,
+                        nomeItemEstoque: estoqueItem?.nome || '',
+                        unidade: estoqueItem?.unidade || ''
+                    };
+                }
+
+                return { ...item, [field]: value };
+            })
         }));
     };
 
     const addIngrediente = () => {
-        setForm(prev => ({ ...prev, ingredientes: [...prev.ingredientes, { valor: '' }] }));
+        setForm(prev => ({ ...prev, ingredientes: [...prev.ingredientes, { nomeItemEstoque: '', quantidade: 1, unidade: '' }] }));
     };
 
     const removeIngrediente = (index: number) => {
@@ -162,14 +211,23 @@ export default function TelaCardapio() {
         setEditingId(produto.id ?? null);
         setForm({
             ...produto,
-            ingredientes: produto.ingredientes?.length ? produto.ingredientes : [{ valor: '' }],
+            ingredientes: produto.ingredientes?.length
+                ? produto.ingredientes.map(ingrediente => hydrateIngrediente(ingrediente, estoqueItems))
+                : [{ nomeItemEstoque: '', quantidade: 1, unidade: '' }],
             passos: produto.passos?.length ? produto.passos : [{ descricao: '', tempoSegundos: 0, videoUrl: '' }]
         });
     };
 
     const normalizeProduto = (produto: Produto) => ({
         ...produto,
-        ingredientes: produto.ingredientes.filter(item => item.valor.trim()),
+        ingredientes: produto.ingredientes
+            .filter(item => item.estoqueItemId)
+            .map(item => ({
+                estoqueItemId: item.estoqueItemId,
+                nomeItemEstoque: item.nomeItemEstoque,
+                quantidade: Number.isFinite(item.quantidade) && item.quantidade > 0 ? item.quantidade : 1,
+                unidade: item.unidade
+            })),
         passos: produto.passos.filter(passo => passo.descricao.trim()).map(passo => ({
             ...passo,
             tempoSegundos: Number.isFinite(passo.tempoSegundos) ? passo.tempoSegundos : 0,
@@ -387,12 +445,27 @@ export default function TelaCardapio() {
                             </div>
                             <div className="dynamic-list">
                                 {form.ingredientes.map((ingrediente, index) => (
-                                    <div key={`ingrediente-${index}`} className="dynamic-row">
+                                    <div key={`ingrediente-${index}`} className="dynamic-row dynamic-row-ingrediente">
+                                        <select
+                                            value={ingrediente.estoqueItemId ?? ''}
+                                            onChange={(e) => updateIngrediente(index, e.target.value, 'estoqueItemId')}
+                                        >
+                                            <option value="">Selecione um item do estoque</option>
+                                            {estoqueItems.map(item => (
+                                                <option key={item.id} value={item.id}>
+                                                    {item.nome} | {item.quantidade} {item.unidade} | {formatCategoriaEstoque(item.categoriaEstoque)}
+                                                </option>
+                                            ))}
+                                        </select>
                                         <input
-                                            value={ingrediente.valor}
-                                            onChange={(e) => updateIngrediente(index, e.target.value)}
-                                            placeholder="Ex: 2 fatias de bacon"
+                                            type="number"
+                                            min="0.01"
+                                            step="0.01"
+                                            value={ingrediente.quantidade}
+                                            onChange={(e) => updateIngrediente(index, Number(e.target.value), 'quantidade')}
+                                            placeholder="Qtd."
                                         />
+                                        <input value={ingrediente.unidade} disabled placeholder="Unidade" />
                                         <button type="button" onClick={() => removeIngrediente(index)} disabled={form.ingredientes.length === 1}>
                                             <Trash2 size={16} />
                                         </button>
@@ -448,7 +521,7 @@ export default function TelaCardapio() {
                         <div className="form-footer">
                             <div className="hint">
                                 <Video size={16} />
-                                Cada etapa pode ter seu próprio vídeo. A cozinha poderá alternar entre os passos.
+                                Os ingredientes do produto são escolhidos a partir do estoque e cada etapa pode ter seu próprio vídeo.
                             </div>
                             <button type="submit" className="primary-action" disabled={saving}>
                                 <Save size={18} />
@@ -468,4 +541,41 @@ export default function TelaCardapio() {
             />
         </div>
     );
+}
+
+function hydrateIngrediente(ingrediente: ProdutoIngrediente, estoqueItems: EstoqueItem[]): ProdutoIngrediente {
+    if (ingrediente.estoqueItemId) {
+        const estoqueItem = estoqueItems.find(item => item.id === ingrediente.estoqueItemId);
+        if (estoqueItem) {
+            return {
+                ...ingrediente,
+                nomeItemEstoque: estoqueItem.nome,
+                unidade: estoqueItem.unidade
+            };
+        }
+    }
+
+    if (ingrediente.nomeItemEstoque) {
+        const estoqueItem = estoqueItems.find(item => item.nome.toLowerCase() === ingrediente.nomeItemEstoque.toLowerCase());
+        if (estoqueItem) {
+            return {
+                ...ingrediente,
+                estoqueItemId: estoqueItem.id,
+                nomeItemEstoque: estoqueItem.nome,
+                unidade: estoqueItem.unidade
+            };
+        }
+    }
+
+    return {
+        ...ingrediente,
+        quantidade: ingrediente.quantidade || 1,
+        unidade: ingrediente.unidade || ''
+    };
+}
+
+function formatCategoriaEstoque(categoria: string) {
+    return categoria
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, letra => letra.toUpperCase());
 }

@@ -7,12 +7,13 @@ import com.chipcook.api.estoque.repository.EstoqueRepository;
 import com.chipcook.api.estoque.service.EstoqueService;
 import com.chipcook.api.pedido.dto.CozinhaIngredienteDTO;
 import com.chipcook.api.pedido.dto.CozinhaItemPedidoDTO;
-import com.chipcook.api.pedido.dto.ItemPedidoDTO;
 import com.chipcook.api.pedido.dto.PedidoCozinhaDTO;
 import com.chipcook.api.pedido.dto.PedidoDTO;
 import com.chipcook.api.pedido.model.ItemPedido;
 import com.chipcook.api.pedido.model.Pedido;
 import com.chipcook.api.pedido.repository.PedidoRepository;
+import com.chipcook.api.produto.model.Produto;
+import com.chipcook.api.produto.repository.ProdutoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,9 @@ public class PedidoService {
 
     @Autowired
     private EstoqueService estoqueService;
+
+    @Autowired
+    private ProdutoRepository produtoRepository;
 
     private static final String STATUS_CONCLUIDO = "concluido";
     private static final String STATUS_PREPARANDO = "preparando";
@@ -92,22 +96,15 @@ public class PedidoService {
         Map<Long, Double> consumosPorItem = new LinkedHashMap<>();
 
         for (ItemPedido itemPedido : pedido.getItens()) {
-            for (ReceitaIngredienteConfig receita : obterReceita(itemPedido.getNomeProduto())) {
-                EstoqueItem itemEstoque = estoqueRepository.findByTenantIdAndNomeIgnoreCaseAndCategoriaEstoque(
-                                tenantId,
-                                receita.nomeInsumo(),
-                                CategoriaEstoque.PORCAO
-                        )
-                        .orElseThrow(() -> new IllegalArgumentException(
-                                "Insumo " + receita.nomeInsumo() + " não encontrado no estoque de montagem"
-                        ));
+            for (ReceitaIngredienteConfig receita : obterReceita(itemPedido)) {
+                EstoqueItem itemEstoque = resolverItemEstoque(tenantId, receita);
 
                 double quantidadeNecessaria = receita.quantidadePorUnidade() * itemPedido.getQuantidade();
                 double disponivel = itemEstoque.getQuantidade() == null ? 0.0 : itemEstoque.getQuantidade();
 
                 if (disponivel < quantidadeNecessaria) {
                     throw new IllegalArgumentException(
-                            "Estoque insuficiente na montagem para " + receita.nomeInsumo()
+                            "Estoque insuficiente para " + receita.nomeInsumo()
                                     + ". Necessário: " + formatarQuantidade(quantidadeNecessaria)
                                     + " " + itemEstoque.getUnidade()
                                     + ", disponível: " + formatarQuantidade(disponivel)
@@ -159,7 +156,7 @@ public class PedidoService {
     }
 
     private CozinhaItemPedidoDTO montarItemCozinha(String tenantId, ItemPedido item, List<String> pendencias) {
-        List<CozinhaIngredienteDTO> ingredientes = obterReceita(item.getNomeProduto()).stream()
+        List<CozinhaIngredienteDTO> ingredientes = obterReceita(item).stream()
                 .map(receita -> montarIngredienteCozinha(tenantId, item, receita, pendencias))
                 .collect(Collectors.toList());
 
@@ -181,12 +178,7 @@ public class PedidoService {
                                                            ReceitaIngredienteConfig receita,
                                                            List<String> pendencias) {
         double quantidadeNecessaria = receita.quantidadePorUnidade() * itemPedido.getQuantidade();
-
-        EstoqueItem itemEstoque = estoqueRepository.findByTenantIdAndNomeIgnoreCaseAndCategoriaEstoque(
-                tenantId,
-                receita.nomeInsumo(),
-                CategoriaEstoque.PORCAO
-        ).orElse(null);
+        EstoqueItem itemEstoque = buscarItemEstoque(tenantId, receita);
 
         double disponivel = itemEstoque == null || itemEstoque.getQuantidade() == null ? 0.0 : itemEstoque.getQuantidade();
         String unidade = itemEstoque == null ? receita.unidade() : itemEstoque.getUnidade();
@@ -196,7 +188,7 @@ public class PedidoService {
             pendencias.add(
                     itemPedido.getNomeProduto() + ": falta "
                             + receita.nomeInsumo()
-                            + " na montagem. Necessário "
+                            + " no estoque. Necessário "
                             + formatarQuantidade(quantidadeNecessaria)
                             + " " + unidade
                             + " e disponível "
@@ -215,17 +207,61 @@ public class PedidoService {
         );
     }
 
-    private List<ReceitaIngredienteConfig> obterReceita(String nomeProduto) {
-        if (nomeProduto == null) {
-            return List.of();
+    private List<ReceitaIngredienteConfig> obterReceita(ItemPedido itemPedido) {
+        Produto produto = obterProduto(itemPedido);
+
+        if (produto != null && produto.getIngredientes() != null && !produto.getIngredientes().isEmpty()) {
+            return produto.getIngredientes().stream()
+                    .filter(ingrediente -> ingrediente.getNomeItemEstoque() != null && !ingrediente.getNomeItemEstoque().isBlank())
+                    .map(ingrediente -> new ReceitaIngredienteConfig(
+                            ingrediente.getEstoqueItemId(),
+                            ingrediente.getNomeItemEstoque(),
+                            ingrediente.getQuantidade() == null || ingrediente.getQuantidade() <= 0 ? 1.0 : ingrediente.getQuantidade(),
+                            ingrediente.getUnidade()
+                    ))
+                    .toList();
         }
 
-        if ("Pizza Margherita".equalsIgnoreCase(nomeProduto)
-                || "Pizza".equalsIgnoreCase(nomeProduto)) {
-            return List.of(new ReceitaIngredienteConfig("Farinha de Trigo", 1.0, "kg"));
+        if (itemPedido.getNomeProduto() != null
+                && ("Pizza Margherita".equalsIgnoreCase(itemPedido.getNomeProduto())
+                || "Pizza".equalsIgnoreCase(itemPedido.getNomeProduto()))) {
+            return List.of(new ReceitaIngredienteConfig(null, "Farinha de Trigo", 1.0, "kg"));
         }
 
         return List.of();
+    }
+
+    private Produto obterProduto(ItemPedido itemPedido) {
+        if (itemPedido.getProdutoId() == null) {
+            return null;
+        }
+
+        String tenantId = TenantContext.getTenantId();
+        return produtoRepository.findByIdAndTenantId(itemPedido.getProdutoId(), tenantId).orElse(null);
+    }
+
+    private EstoqueItem resolverItemEstoque(String tenantId, ReceitaIngredienteConfig receita) {
+        EstoqueItem itemEstoque = buscarItemEstoque(tenantId, receita);
+        if (itemEstoque == null) {
+            throw new IllegalArgumentException("Insumo " + receita.nomeInsumo() + " não encontrado no estoque");
+        }
+        return itemEstoque;
+    }
+
+    private EstoqueItem buscarItemEstoque(String tenantId, ReceitaIngredienteConfig receita) {
+        if (receita.estoqueItemId() != null) {
+            return estoqueRepository.findByIdAndTenantId(receita.estoqueItemId(), tenantId).orElse(null);
+        }
+
+        List<EstoqueItem> encontrados = estoqueRepository.findByTenantIdAndNomeIgnoreCase(tenantId, receita.nomeInsumo());
+        if (encontrados.isEmpty()) {
+            return null;
+        }
+
+        return encontrados.stream()
+                .filter(item -> item.getCategoriaEstoque() == CategoriaEstoque.PORCAO)
+                .findFirst()
+                .orElse(encontrados.get(0));
     }
 
     private String formatarQuantidade(double quantidade) {
@@ -235,6 +271,6 @@ public class PedidoService {
         return String.format("%.2f", quantidade);
     }
 
-    private record ReceitaIngredienteConfig(String nomeInsumo, double quantidadePorUnidade, String unidade) {
+    private record ReceitaIngredienteConfig(Long estoqueItemId, String nomeInsumo, double quantidadePorUnidade, String unidade) {
     }
 }
