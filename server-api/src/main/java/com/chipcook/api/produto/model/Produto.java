@@ -24,12 +24,12 @@ public class Produto {
     private String imagem; // URL ou Emoji
     private Boolean disponivel;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "tb_produto_ingrediente", joinColumns = @JoinColumn(name = "produto_id"))
     @OrderColumn(name = "ordem")
     private List<ProdutoIngrediente> ingredientes = new ArrayList<>();
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "tb_produto_passo", joinColumns = @JoinColumn(name = "produto_id"))
     @OrderColumn(name = "ordem")
     private List<ProdutoPassoReceita> passos = new ArrayList<>();

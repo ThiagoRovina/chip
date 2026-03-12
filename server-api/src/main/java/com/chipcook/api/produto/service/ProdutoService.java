@@ -7,6 +7,7 @@ import com.chipcook.api.produto.model.ProdutoPassoReceita;
 import com.chipcook.api.produto.repository.ProdutoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -18,6 +19,7 @@ public class ProdutoService {
     @Autowired
     private ProdutoRepository produtoRepository;
 
+    @Transactional(readOnly = true)
     public List<Produto> listar() {
         String tenantId = TenantContext.getTenantId();
         List<Produto> produtos = produtoRepository.findByTenantId(tenantId);
@@ -27,16 +29,22 @@ public class ProdutoService {
             criarSeedXbacon();
             criarSeed("Coca-Cola Lata", "Refrigerante 350ml", new BigDecimal("6.00"), "Bebidas", "🥤");
             criarSeed("Batata Frita", "Porção média", new BigDecimal("15.00"), "Acompanhamentos", "🍟");
-            return produtoRepository.findByTenantId(tenantId);
+            List<Produto> produtosSeed = produtoRepository.findByTenantId(tenantId);
+            produtosSeed.forEach(this::inicializarColecoes);
+            return produtosSeed;
         }
 
+        produtos.forEach(this::inicializarColecoes);
         return produtos;
     }
 
+    @Transactional(readOnly = true)
     public Produto buscarPorId(Long id) {
         String tenantId = TenantContext.getTenantId();
-        return produtoRepository.findByIdAndTenantId(id, tenantId)
+        Produto produto = produtoRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+        inicializarColecoes(produto);
+        return produto;
     }
 
     public Produto atualizar(Long id, Produto produtoAtualizado) {
@@ -146,5 +154,10 @@ public class ProdutoService {
         passo.setTempoSegundos(tempoSegundos);
         passo.setVideoUrl(videoUrl);
         return passo;
+    }
+
+    private void inicializarColecoes(Produto produto) {
+        produto.getIngredientes().size();
+        produto.getPassos().size();
     }
 }
