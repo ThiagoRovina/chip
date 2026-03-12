@@ -7,6 +7,7 @@ import TelaPrincipal from "./home/TelaPrincipal";
 import TelaUsuario from "./usuario/TelaUsuario";
 import TelaCadUsuario from "./usuario/telaCadUsuario";
 import TelaEstoque from "./home/TelaEstoque";
+import TelaCardapio from "./home/TelaCardapio";
 import TelaCozinha from "./home/TelaCozinha";
 import TelaPedidos from "./home/TelaPedidos";
 import TelaEstoquePorCategoria from "./estoque/TelaEstoquePorCategoria";
@@ -74,6 +75,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <TelaRelatoriosEstoque />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/cardapio"
+              element={
+                <PrivateRoute>
+                  <TelaCardapio />
                 </PrivateRoute>
               }
             />

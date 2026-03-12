@@ -41,6 +41,7 @@ interface Pedido {
 interface PassoReceita {
     descricao: string;
     tempoSegundos: number;
+    videoUrl?: string;
 }
 
 interface Receita {
@@ -49,44 +50,19 @@ interface Receita {
     passos: PassoReceita[];
 }
 
-// Mock de Receitas (Mantido local por enquanto)
-const MOCK_RECEITAS: Record<string, Receita> = {
-    'X-Bacon': {
-        nome: 'X-Bacon Clássico',
-        ingredientes: [
-            '1 Pão de Hambúrguer', 
-            '1 Hambúrguer 180g', 
-            '2 Fatias de Bacon', 
-            '1 Fatia de Queijo Cheddar', 
-            'Maionese da Casa',
-            'Alface e Tomate'
-        ],
-        passos: [
-            { descricao: 'Selar o pão na chapa com manteiga.', tempoSegundos: 10 },
-            { descricao: 'Grelhar o hambúrguer (3 min cada lado).', tempoSegundos: 15 },
-            { descricao: 'Fritar o bacon até ficar crocante.', tempoSegundos: 10 },
-            { descricao: 'Derreter o queijo sobre a carne.', tempoSegundos: 5 },
-            { descricao: 'Montar: Pão, Carne, Queijo, Bacon, Salada.', tempoSegundos: 10 }
-        ]
-    },
-    'Esfiha Carne': {
-        nome: 'Esfiha de Carne',
-        ingredientes: ['Massa de Esfiha', 'Recheio de Carne Temperada', 'Limão'],
-        passos: [
-            { descricao: 'Abrir a massa em formato circular.', tempoSegundos: 10 },
-            { descricao: 'Adicionar o recheio de carne no centro.', tempoSegundos: 5 },
-            { descricao: 'Assar no forno a 250°C.', tempoSegundos: 20 }
-        ]
-    }
-};
+interface ProdutoReceita {
+    nome: string;
+    ingredientes?: Array<{ valor: string }>;
+    passos?: PassoReceita[];
+}
 
 const DEFAULT_RECEITA: Receita = {
     nome: 'Receita Padrão',
     ingredientes: ['Ingrediente 1', 'Ingrediente 2', 'Ingrediente 3'],
     passos: [
-        { descricao: 'Preparar os ingredientes.', tempoSegundos: 5 },
-        { descricao: 'Executar o processo de cozimento.', tempoSegundos: 10 },
-        { descricao: 'Finalizar e empratar.', tempoSegundos: 5 }
+        { descricao: 'Preparar os ingredientes.', tempoSegundos: 5, videoUrl: '' },
+        { descricao: 'Executar o processo de cozimento.', tempoSegundos: 10, videoUrl: '' },
+        { descricao: 'Finalizar e empratar.', tempoSegundos: 5, videoUrl: '' }
     ]
 };
 
@@ -94,6 +70,7 @@ export default function TelaCozinha() {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
     const [pedidos, setPedidos] = useState<Pedido[]>([]);
+    const [receitasPorProduto, setReceitasPorProduto] = useState<Record<string, Receita>>({});
     const [now, setNow] = useState(new Date());
     const [tenantName, setTenantName] = useState(' ');
 
@@ -123,6 +100,7 @@ export default function TelaCozinha() {
     // Carrega pedidos iniciais e configura polling
     useEffect(() => {
         carregarPedidos();
+        carregarReceitas();
         const interval = setInterval(() => {
             setNow(new Date());
             carregarPedidos(); // Atualiza a lista a cada 2 segundos
@@ -147,6 +125,33 @@ export default function TelaCozinha() {
             }
         } catch (error) {
             console.error("Erro ao carregar pedidos:", error);
+        }
+    };
+
+    const carregarReceitas = async () => {
+        try {
+            const response = await fetch(buildApiUrl('/api/produtos'), {
+                headers: withTenantHeader()
+            });
+            if (!response.ok) return;
+            const data = await response.json();
+            const receitas = data.reduce((acc: Record<string, Receita>, produto: ProdutoReceita) => {
+                acc[produto.nome] = {
+                    nome: produto.nome,
+                    ingredientes: (produto.ingredientes || []).map(item => item.valor),
+                    passos: (produto.passos || []).length > 0
+                        ? produto.passos!.map(passo => ({
+                            descricao: passo.descricao,
+                            tempoSegundos: passo.tempoSegundos || 0,
+                            videoUrl: passo.videoUrl || ''
+                        }))
+                        : DEFAULT_RECEITA.passos
+                };
+                return acc;
+            }, {});
+            setReceitasPorProduto(receitas);
+        } catch (error) {
+            console.error('Erro ao carregar receitas:', error);
         }
     };
 
@@ -262,7 +267,7 @@ export default function TelaCozinha() {
     // --- Lógica da Receita ---
 
     const abrirReceita = (nomeItem: string) => {
-        const receita = MOCK_RECEITAS[nomeItem] || { ...DEFAULT_RECEITA, nome: nomeItem };
+        const receita = receitasPorProduto[nomeItem] || { ...DEFAULT_RECEITA, nome: nomeItem };
         setReceitaAtiva(receita);
         setPassoAtual(0);
         setTempoRestante(receita.passos[0].tempoSegundos);
@@ -307,6 +312,28 @@ export default function TelaCozinha() {
             });
             fecharReceita();
         }
+    };
+
+    const selecionarPasso = (index: number) => {
+        if (!receitaAtiva) return;
+        stopAlarm();
+        setPassoAtual(index);
+        setTempoRestante(receitaAtiva.passos[index].tempoSegundos);
+        setTimerRodando(false);
+        setPassoConcluido(false);
+    };
+
+    const getVideoEmbedUrl = (videoUrl?: string) => {
+        if (!videoUrl) return null;
+        if (videoUrl.includes('youtube.com/watch?v=')) {
+            const videoId = videoUrl.split('v=')[1]?.split('&')[0];
+            return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+        }
+        if (videoUrl.includes('youtu.be/')) {
+            const videoId = videoUrl.split('youtu.be/')[1]?.split('?')[0];
+            return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+        }
+        return null;
     };
 
     return (
@@ -419,8 +446,27 @@ export default function TelaCozinha() {
                             {/* Lado Esquerdo: Vídeo Placeholder e Ingredientes */}
                             <div className="recipe-left">
                                 <div className="video-placeholder">
-                                    <Video size={48} color="#ccc" />
-                                    <span>Vídeo da Receita</span>
+                                    {getVideoEmbedUrl(receitaAtiva.passos[passoAtual].videoUrl) ? (
+                                        <iframe
+                                            title={`Video do passo ${passoAtual + 1}`}
+                                            src={getVideoEmbedUrl(receitaAtiva.passos[passoAtual].videoUrl) || ''}
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            allowFullScreen
+                                            style={{ width: '100%', height: '100%', border: 'none', borderRadius: '18px' }}
+                                        />
+                                    ) : receitaAtiva.passos[passoAtual].videoUrl ? (
+                                        <video
+                                            key={receitaAtiva.passos[passoAtual].videoUrl}
+                                            controls
+                                            src={receitaAtiva.passos[passoAtual].videoUrl}
+                                            style={{ width: '100%', height: '100%', borderRadius: '18px', objectFit: 'cover' }}
+                                        />
+                                    ) : (
+                                        <>
+                                            <Video size={48} color="#ccc" />
+                                            <span>Sem vídeo neste passo</span>
+                                        </>
+                                    )}
                                 </div>
                                 <div className="ingredients-list">
                                     <h3>Ingredientes</h3>
@@ -434,6 +480,18 @@ export default function TelaCozinha() {
 
                             {/* Lado Direito: Passos e Timer */}
                             <div className="recipe-right">
+                                <div className="step-selector">
+                                    {receitaAtiva.passos.map((_, index) => (
+                                        <button
+                                            key={`step-selector-${index}`}
+                                            type="button"
+                                            className={`step-selector-btn ${index === passoAtual ? 'active' : ''}`}
+                                            onClick={() => selecionarPasso(index)}
+                                        >
+                                            {index + 1}
+                                        </button>
+                                    ))}
+                                </div>
                                 <div className="step-indicator">
                                     Passo {passoAtual + 1} de {receitaAtiva.passos.length}
                                 </div>

@@ -10,10 +10,6 @@ import {
     Plus,
     Minus,
     Send,
-    Utensils,
-    Coffee,
-    Beer,
-    IceCream,
     Bell,
     LogOut
 } from 'lucide-react';
@@ -25,6 +21,7 @@ interface Produto {
     preco: number;
     categoria: string;
     imagem: string; // Emoji
+    disponivel?: boolean;
 }
 
 interface ItemPedido {
@@ -33,33 +30,16 @@ interface ItemPedido {
     observacao?: string;
 }
 
-// Dados Mockados
-const CATEGORIAS = [
-    { id: 'esfihas', nome: 'Esfihas', icon: <Utensils size={18} /> },
-    { id: 'bebidas', nome: 'Bebidas', icon: <Beer size={18} /> },
-    { id: 'sobremesas', nome: 'Sobremesas', icon: <IceCream size={18} /> },
-    { id: 'combos', nome: 'Combos', icon: <Coffee size={18} /> },
-];
-
-const PRODUTOS: Produto[] = [
-    { id: '1', nome: 'Carne', preco: 6.50, categoria: 'esfihas', imagem: '🥩' },
-    { id: '2', nome: 'Queijo', preco: 6.50, categoria: 'esfihas', imagem: '🧀' },
-    { id: '3', nome: 'Calabresa', preco: 6.50, categoria: 'esfihas', imagem: '🥓' },
-    { id: '4', nome: 'Frango c/ Catupiry', preco: 7.00, categoria: 'esfihas', imagem: '🍗' },
-    { id: '5', nome: 'Coca-Cola Lata', preco: 6.00, categoria: 'bebidas', imagem: '🥤' },
-    { id: '6', nome: 'Suco Laranja', preco: 8.00, categoria: 'bebidas', imagem: '🍊' },
-    { id: '7', nome: 'Chocolate', preco: 8.50, categoria: 'sobremesas', imagem: '🍫' },
-    { id: '8', nome: 'Romeu e Julieta', preco: 8.50, categoria: 'sobremesas', imagem: '🍓' },
-];
-
 export default function TelaPedidos() {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
-    const [categoriaAtiva, setCategoriaAtiva] = useState('esfihas');
+    const [categoriaAtiva, setCategoriaAtiva] = useState('');
     const [mesa, setMesa] = useState('01');
     const [itensPedido, setItensPedido] = useState<ItemPedido[]>([]);
     const [loading, setLoading] = useState(false);
+    const [loadingProdutos, setLoadingProdutos] = useState(true);
     const [tenantName, setTenantName] = useState(' ');
+    const [produtos, setProdutos] = useState<Produto[]>([]);
     const [feedback, setFeedback] = useState<{ open: boolean; title: string; message: string; variant: 'success' | 'error' | 'info'; }>({
         open: false,
         title: '',
@@ -71,6 +51,7 @@ export default function TelaPedidos() {
 
     useEffect(() => {
         fetchTenantInfo();
+        fetchProdutos();
     }, []);
 
     const fetchTenantInfo = async () => {
@@ -87,6 +68,26 @@ export default function TelaPedidos() {
         }
     };
 
+    const fetchProdutos = async () => {
+        try {
+            const response = await fetch(buildApiUrl('/api/produtos'), {
+                headers: withTenantHeader()
+            });
+            if (response.ok) {
+                const data = await response.json();
+                const produtosDisponiveis = data.filter((produto: Produto) => produto.disponivel !== false);
+                setProdutos(produtosDisponiveis);
+                if (produtosDisponiveis.length > 0) {
+                    setCategoriaAtiva((prev) => prev || produtosDisponiveis[0].categoria);
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao buscar produtos:', error);
+        } finally {
+            setLoadingProdutos(false);
+        }
+    };
+
     const handleLogout = () => {
         logout();
         navigate('/login');
@@ -97,8 +98,8 @@ export default function TelaPedidos() {
         return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
     };
 
-    // Filtra produtos pela categoria
-    const produtosVisiveis = PRODUTOS.filter(p => p.categoria === categoriaAtiva);
+    const categorias = Array.from(new Set(produtos.map(produto => produto.categoria).filter(Boolean)));
+    const produtosVisiveis = produtos.filter(p => p.categoria === categoriaAtiva);
 
     // Adicionar produto ao pedido
     const adicionarProduto = (produto: Produto) => {
@@ -217,14 +218,14 @@ export default function TelaPedidos() {
                 <div className="pdv-catalog">
                     {/* Categorias */}
                     <div className="category-bar">
-                        {CATEGORIAS.map(cat => (
+                        {categorias.map(categoria => (
                             <button
-                                key={cat.id}
-                                className={`category-btn ${categoriaAtiva === cat.id ? 'active' : ''}`}
-                                onClick={() => setCategoriaAtiva(cat.id)}
+                                key={categoria}
+                                className={`category-btn ${categoriaAtiva === categoria ? 'active' : ''}`}
+                                onClick={() => setCategoriaAtiva(categoria)}
                             >
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    {cat.icon} {cat.nome}
+                                    {categoria}
                                 </span>
                             </button>
                         ))}
@@ -232,17 +233,23 @@ export default function TelaPedidos() {
 
                     {/* Grid de Produtos */}
                     <div className="products-grid">
-                        {produtosVisiveis.map(produto => (
-                            <div
-                                key={produto.id}
-                                className="product-card"
-                                onClick={() => adicionarProduto(produto)}
-                            >
-                                <div className="product-img">{produto.imagem}</div>
-                                <div className="product-name">{produto.nome}</div>
-                                <div className="product-price">R$ {produto.preco.toFixed(2)}</div>
-                            </div>
-                        ))}
+                        {loadingProdutos ? (
+                            <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#888' }}>Carregando cardápio...</div>
+                        ) : produtosVisiveis.length === 0 ? (
+                            <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#888' }}>Nenhum produto disponível nessa categoria.</div>
+                        ) : (
+                            produtosVisiveis.map(produto => (
+                                <div
+                                    key={produto.id}
+                                    className="product-card"
+                                    onClick={() => adicionarProduto(produto)}
+                                >
+                                    <div className="product-img">{produto.imagem}</div>
+                                    <div className="product-name">{produto.nome}</div>
+                                    <div className="product-price">R$ {produto.preco.toFixed(2)}</div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
 
