@@ -53,55 +53,56 @@ export default function TelaPedidos() {
     const userRole = (user as any)?.cargo?.toUpperCase() || 'GARCOM';
 
     useEffect(() => {
+        const fetchTenantInfo = async () => {
+            try {
+                const response = await fetch(buildApiUrl('/api/tenant/current'), {
+                    headers: withTenantHeader()
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setTenantName(data.name || ' ');
+                }
+            } catch (error) {
+                console.error('Erro ao buscar informações do tenant:', error);
+            }
+        };
+
+        const fetchProdutos = async () => {
+            try {
+                const response = await fetch(buildApiUrl('/api/produtos'), {
+                    headers: withTenantHeader()
+                });
+
+                if (!response.ok) {
+                    throw new Error('Falha ao carregar produtos');
+                }
+
+                const data = await response.json();
+                setProdutos(data);
+
+                if (data.length > 0) {
+                    setCategoriaAtiva(data[0].categoria);
+                }
+            } catch (error) {
+                console.error('Erro ao buscar produtos:', error);
+                setFeedback({
+                    open: true,
+                    title: 'Produtos indisponíveis',
+                    message: 'Não foi possível carregar o cardápio agora.',
+                    variant: 'error'
+                });
+            }
+        };
+
         fetchTenantInfo();
         fetchProdutos();
     }, []);
-
-    const fetchTenantInfo = async () => {
-        try {
-            const response = await fetch(buildApiUrl('/api/tenant/current'), {
-                headers: withTenantHeader()
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setTenantName(data.name || ' ');
-            }
-        } catch (error) {
-            console.error('Erro ao buscar informações do tenant:', error);
-        }
-    };
 
     const handleLogout = () => {
         logout();
         navigate('/login');
     };
 
-    const fetchProdutos = async () => {
-        try {
-            const response = await fetch(buildApiUrl('/api/produtos'), {
-                headers: withTenantHeader()
-            });
-
-            if (!response.ok) {
-                throw new Error('Falha ao carregar produtos');
-            }
-
-            const data = await response.json();
-            setProdutos(data);
-
-            if (data.length > 0 && !categoriaAtiva) {
-                setCategoriaAtiva(data[0].categoria);
-            }
-        } catch (error) {
-            console.error('Erro ao buscar produtos:', error);
-            setFeedback({
-                open: true,
-                title: 'Produtos indisponíveis',
-                message: 'Não foi possível carregar o cardápio agora.',
-                variant: 'error'
-            });
-        }
-    };
 
     const getInitials = (name: string | undefined) => {
         if (!name) return 'U';
