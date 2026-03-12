@@ -14,13 +14,14 @@ import {
     Coffee,
     Beer,
     IceCream,
+    Pizza,
     Bell,
     LogOut
 } from 'lucide-react';
 
 // Tipos
 interface Produto {
-    id: string;
+    id: number;
     nome: string;
     preco: number;
     categoria: string;
@@ -33,33 +34,15 @@ interface ItemPedido {
     observacao?: string;
 }
 
-// Dados Mockados
-const CATEGORIAS = [
-    { id: 'esfihas', nome: 'Esfihas', icon: <Utensils size={18} /> },
-    { id: 'bebidas', nome: 'Bebidas', icon: <Beer size={18} /> },
-    { id: 'sobremesas', nome: 'Sobremesas', icon: <IceCream size={18} /> },
-    { id: 'combos', nome: 'Combos', icon: <Coffee size={18} /> },
-];
-
-const PRODUTOS: Produto[] = [
-    { id: '1', nome: 'Carne', preco: 6.50, categoria: 'esfihas', imagem: '🥩' },
-    { id: '2', nome: 'Queijo', preco: 6.50, categoria: 'esfihas', imagem: '🧀' },
-    { id: '3', nome: 'Calabresa', preco: 6.50, categoria: 'esfihas', imagem: '🥓' },
-    { id: '4', nome: 'Frango c/ Catupiry', preco: 7.00, categoria: 'esfihas', imagem: '🍗' },
-    { id: '5', nome: 'Coca-Cola Lata', preco: 6.00, categoria: 'bebidas', imagem: '🥤' },
-    { id: '6', nome: 'Suco Laranja', preco: 8.00, categoria: 'bebidas', imagem: '🍊' },
-    { id: '7', nome: 'Chocolate', preco: 8.50, categoria: 'sobremesas', imagem: '🍫' },
-    { id: '8', nome: 'Romeu e Julieta', preco: 8.50, categoria: 'sobremesas', imagem: '🍓' },
-];
-
 export default function TelaPedidos() {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
-    const [categoriaAtiva, setCategoriaAtiva] = useState('esfihas');
+    const [categoriaAtiva, setCategoriaAtiva] = useState('');
     const [mesa, setMesa] = useState('01');
     const [itensPedido, setItensPedido] = useState<ItemPedido[]>([]);
     const [loading, setLoading] = useState(false);
     const [tenantName, setTenantName] = useState(' ');
+    const [produtos, setProdutos] = useState<Produto[]>([]);
     const [feedback, setFeedback] = useState<{ open: boolean; title: string; message: string; variant: 'success' | 'error' | 'info'; }>({
         open: false,
         title: '',
@@ -71,6 +54,7 @@ export default function TelaPedidos() {
 
     useEffect(() => {
         fetchTenantInfo();
+        fetchProdutos();
     }, []);
 
     const fetchTenantInfo = async () => {
@@ -92,13 +76,41 @@ export default function TelaPedidos() {
         navigate('/login');
     };
 
+    const fetchProdutos = async () => {
+        try {
+            const response = await fetch(buildApiUrl('/api/produtos'), {
+                headers: withTenantHeader()
+            });
+
+            if (!response.ok) {
+                throw new Error('Falha ao carregar produtos');
+            }
+
+            const data = await response.json();
+            setProdutos(data);
+
+            if (data.length > 0 && !categoriaAtiva) {
+                setCategoriaAtiva(data[0].categoria);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar produtos:', error);
+            setFeedback({
+                open: true,
+                title: 'Produtos indisponíveis',
+                message: 'Não foi possível carregar o cardápio agora.',
+                variant: 'error'
+            });
+        }
+    };
+
     const getInitials = (name: string | undefined) => {
         if (!name) return 'U';
         return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
     };
 
     // Filtra produtos pela categoria
-    const produtosVisiveis = PRODUTOS.filter(p => p.categoria === categoriaAtiva);
+    const categorias = Array.from(new Set(produtos.map(produto => produto.categoria)));
+    const produtosVisiveis = produtos.filter(p => p.categoria === categoriaAtiva);
 
     // Adicionar produto ao pedido
     const adicionarProduto = (produto: Produto) => {
@@ -116,7 +128,7 @@ export default function TelaPedidos() {
     };
 
     // Ajustar quantidade (+ / -)
-    const ajustarQuantidade = (idProduto: string, delta: number) => {
+    const ajustarQuantidade = (idProduto: number, delta: number) => {
         setItensPedido(prev => prev.map(item => {
             if (item.produto.id === idProduto) {
                 const novaQtd = item.quantidade + delta;
@@ -138,6 +150,7 @@ export default function TelaPedidos() {
             mesa: mesa,
             cliente: `Mesa ${mesa}`, // Opcional, pode ser nome do cliente se tiver input
             itens: itensPedido.map(item => ({
+                produtoId: item.produto.id,
                 nomeProduto: item.produto.nome,
                 quantidade: item.quantidade,
                 observacao: item.observacao || ''
@@ -217,14 +230,14 @@ export default function TelaPedidos() {
                 <div className="pdv-catalog">
                     {/* Categorias */}
                     <div className="category-bar">
-                        {CATEGORIAS.map(cat => (
+                        {categorias.map(cat => (
                             <button
-                                key={cat.id}
-                                className={`category-btn ${categoriaAtiva === cat.id ? 'active' : ''}`}
-                                onClick={() => setCategoriaAtiva(cat.id)}
+                                key={cat}
+                                className={`category-btn ${categoriaAtiva === cat ? 'active' : ''}`}
+                                onClick={() => setCategoriaAtiva(cat)}
                             >
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    {cat.icon} {cat.nome}
+                                    {getCategoriaIcon(cat)} {cat}
                                 </span>
                             </button>
                         ))}
@@ -243,6 +256,11 @@ export default function TelaPedidos() {
                                 <div className="product-price">R$ {produto.preco.toFixed(2)}</div>
                             </div>
                         ))}
+                        {produtosVisiveis.length === 0 && (
+                            <div style={{ textAlign: 'center', padding: '40px', color: '#aaa', gridColumn: '1/-1' }}>
+                                <p>Nenhum produto disponível nesta categoria.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -317,4 +335,15 @@ export default function TelaPedidos() {
         />
         </div>
     );
+}
+
+function getCategoriaIcon(categoria: string) {
+    const nome = categoria.toLowerCase();
+
+    if (nome.includes('pizza')) return <Pizza size={18} />;
+    if (nome.includes('bebida')) return <Beer size={18} />;
+    if (nome.includes('sobremesa')) return <IceCream size={18} />;
+    if (nome.includes('combo')) return <Coffee size={18} />;
+
+    return <Utensils size={18} />;
 }

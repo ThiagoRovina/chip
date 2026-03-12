@@ -1,5 +1,6 @@
 package com.chipcook.api.pedido.controller;
 
+import com.chipcook.api.pedido.dto.PedidoCozinhaDTO;
 import com.chipcook.api.pedido.dto.PedidoDTO;
 import com.chipcook.api.pedido.model.Pedido;
 import com.chipcook.api.pedido.service.PedidoService;
@@ -21,13 +22,32 @@ public class PedidoController {
         return ResponseEntity.ok(pedidoService.listarPedidosAtivos());
     }
 
+    @GetMapping("/cozinha")
+    public ResponseEntity<List<PedidoCozinhaDTO>> listarCozinha() {
+        return ResponseEntity.ok(pedidoService.listarPedidosCozinha());
+    }
+
     @PostMapping
     public ResponseEntity<Pedido> criar(@RequestBody PedidoDTO dto) {
         return ResponseEntity.ok(pedidoService.criarPedido(dto));
     }
 
+    @PutMapping("/{id}/iniciar")
+    public ResponseEntity<Pedido> iniciar(@PathVariable Long id) {
+        return ResponseEntity.ok(pedidoService.iniciarPreparo(id));
+    }
+
     @PutMapping("/{id}/status")
     public ResponseEntity<Pedido> atualizarStatus(@PathVariable Long id, @RequestBody String status) {
         return ResponseEntity.ok(pedidoService.atualizarStatus(id, status));
+    }
+
+    @PutMapping("/{id}/pronto")
+    public ResponseEntity<?> concluirComBaixa(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(pedidoService.concluirPedidoComBaixa(id));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

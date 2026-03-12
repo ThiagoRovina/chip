@@ -31,6 +31,23 @@ public class EstoqueService {
     private final EstoqueRepository estoqueRepository;
 
     public List<EstoqueItem> listarItens() {
+        return garantirItensCenario();
+    }
+
+    public List<EstoqueItem> listarPorCategoria(CategoriaEstoque categoria) {
+        garantirItensCenario();
+        String tenantId = TenantContext.getTenantId();
+        return estoqueRepository.findByTenantIdAndCategoriaEstoque(tenantId, categoria);
+    }
+
+    public EstoqueItem buscarPorId(Long id) {
+        garantirItensCenario();
+        String tenantId = TenantContext.getTenantId();
+        return estoqueRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new IllegalArgumentException("Item não encontrado"));
+    }
+
+    public List<EstoqueItem> garantirItensCenario() {
         String tenantId = TenantContext.getTenantId();
         List<EstoqueItem> itens = estoqueRepository.findByTenantId(tenantId);
 
@@ -39,18 +56,12 @@ public class EstoqueService {
             return estoqueRepository.findByTenantId(tenantId);
         }
 
-        return itens;
-    }
+        boolean alterado = garantirItemCenario(itens, "Farinha de Trigo", CategoriaEstoque.GERAL, 25.0,
+                "kg", "Mercearia", "🌾", 5.0, "Depósito Seco");
+        alterado = garantirItemCenario(itens, "Farinha de Trigo", CategoriaEstoque.PORCAO, 2.0,
+                "kg", "Montagem", "🍕", 1.0, "Bancada Montagem") || alterado;
 
-    public List<EstoqueItem> listarPorCategoria(CategoriaEstoque categoria) {
-        String tenantId = TenantContext.getTenantId();
-        return estoqueRepository.findByTenantIdAndCategoriaEstoque(tenantId, categoria);
-    }
-
-    public EstoqueItem buscarPorId(Long id) {
-        String tenantId = TenantContext.getTenantId();
-        return estoqueRepository.findByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new IllegalArgumentException("Item não encontrado"));
+        return alterado ? estoqueRepository.findByTenantId(tenantId) : itens;
     }
 
     public EstoqueItem criar(EstoqueItem item, String perfil) {
@@ -222,6 +233,8 @@ public class EstoqueService {
                 "Mercearia", "🌾", CategoriaEstoque.GERAL, 20.0, "Depósito Principal");
         criarItemInicial("Coca-Cola (Caixa)", 48.0, "lata", LocalDate.now().plusMonths(8),
                 "Bebidas", "🥤", CategoriaEstoque.GERAL, 24.0, "Depósito Bebidas");
+        criarItemInicial("Farinha de Trigo", 25.0, "kg", LocalDate.now().plusMonths(4),
+                "Mercearia", "🌾", CategoriaEstoque.GERAL, 5.0, "Depósito Seco");
 
         criarItemInicial("Carne Marinada", 15.0, "kg", LocalDate.now().plusDays(2),
                 "Semi-Preparados", "🍖", CategoriaEstoque.INTERNO, 5.0, "Geladeira Produção");
@@ -237,6 +250,8 @@ public class EstoqueService {
                 "Proteínas Prontas", "🍽️", CategoriaEstoque.PORCAO, 5.0, "Pass Frio");
         criarItemInicial("Molho Especial (Porção)", 20.0, "porção", LocalDate.now().plusDays(2),
                 "Molhos", "🥫", CategoriaEstoque.PORCAO, 8.0, "Pass Montagem");
+        criarItemInicial("Farinha de Trigo", 2.0, "kg", LocalDate.now().plusMonths(2),
+                "Montagem", "🍕", CategoriaEstoque.PORCAO, 1.0, "Bancada Montagem");
     }
 
     private void criarItemInicial(String nome, Double qtd, String un, LocalDate val,
@@ -252,5 +267,26 @@ public class EstoqueService {
         item.setEstoqueMinimo(estoqueMin);
         item.setLocalizacao(localizacao);
         estoqueRepository.save(item);
+    }
+
+    private boolean garantirItemCenario(List<EstoqueItem> itens,
+                                        String nome,
+                                        CategoriaEstoque categoriaEstoque,
+                                        Double quantidade,
+                                        String unidade,
+                                        String categoria,
+                                        String imagem,
+                                        Double estoqueMinimo,
+                                        String localizacao) {
+        boolean existe = itens.stream().anyMatch(item -> nome.equalsIgnoreCase(item.getNome())
+                && item.getCategoriaEstoque() == categoriaEstoque);
+
+        if (!existe) {
+            criarItemInicial(nome, quantidade, unidade, LocalDate.now().plusMonths(3),
+                    categoria, imagem, categoriaEstoque, estoqueMinimo, localizacao);
+            return true;
+        }
+
+        return false;
     }
 }

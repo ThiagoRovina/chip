@@ -16,6 +16,10 @@ public interface EstoqueRepository extends JpaRepository<EstoqueItem, Long> {
 
     Optional<EstoqueItem> findByIdAndTenantId(Long id, String tenantId);
 
+    Optional<EstoqueItem> findByTenantIdAndNomeIgnoreCaseAndCategoriaEstoque(String tenantId,
+                                                                              String nome,
+                                                                              CategoriaEstoque categoria);
+
     // Métodos para categorias
     List<EstoqueItem> findByTenantIdAndCategoriaEstoque(String tenantId, CategoriaEstoque categoria);
 

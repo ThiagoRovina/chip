@@ -21,13 +21,17 @@ public class ProdutoService {
 
         // Seed inicial se vazio
         if (produtos.isEmpty()) {
+            criarSeed("Pizza Margherita", "Pizza tradicional preparada com insumos da montagem", new BigDecimal("42.00"), "Pizzas", "🍕");
             criarSeed("X-Bacon", "Hambúrguer com bacon crocante", new BigDecimal("25.00"), "Lanches", "🍔");
             criarSeed("Coca-Cola Lata", "Refrigerante 350ml", new BigDecimal("6.00"), "Bebidas", "🥤");
             criarSeed("Batata Frita", "Porção média", new BigDecimal("15.00"), "Acompanhamentos", "🍟");
             return produtoRepository.findByTenantId(tenantId);
         }
 
-        return produtos;
+        boolean alterado = garantirProdutoCenario(produtos, "Pizza Margherita", "Pizza tradicional preparada com insumos da montagem",
+                new BigDecimal("42.00"), "Pizzas", "🍕");
+
+        return alterado ? produtoRepository.findByTenantId(tenantId) : produtos;
     }
 
     public Produto buscarPorId(Long id) {
@@ -68,5 +72,14 @@ public class ProdutoService {
         p.setImagem(img);
         p.setDisponivel(true);
         produtoRepository.save(p);
+    }
+
+    private boolean garantirProdutoCenario(List<Produto> produtos, String nome, String desc, BigDecimal preco, String cat, String img) {
+        boolean existe = produtos.stream().anyMatch(produto -> nome.equalsIgnoreCase(produto.getNome()));
+        if (!existe) {
+            criarSeed(nome, desc, preco, cat, img);
+            return true;
+        }
+        return false;
     }
 }

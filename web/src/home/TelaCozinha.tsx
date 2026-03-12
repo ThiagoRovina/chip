@@ -23,19 +23,33 @@ import {
 
 // Tipos
 interface ItemPedido {
-    id: string;
+    id: number;
+    produtoId?: number;
     nomeProduto: string; // Backend retorna nomeProduto
     quantidade: number;
     observacao?: string;
+    estoqueDisponivel: boolean;
+    ingredientes: IngredientePedido[];
 }
 
 interface Pedido {
-    id: string;
+    id: number;
     mesa?: string;
     cliente?: string;
     itens: ItemPedido[];
     dataHora: string; // Backend retorna string ISO
     status: 'novo' | 'preparando' | 'pronto';
+    estoqueDisponivel: boolean;
+    pendenciasEstoque: string[];
+}
+
+interface IngredientePedido {
+    estoqueItemId?: number;
+    nome: string;
+    quantidadeNecessaria: number;
+    quantidadeDisponivel: number;
+    unidade: string;
+    disponivel: boolean;
 }
 
 interface PassoReceita {
@@ -76,6 +90,15 @@ const MOCK_RECEITAS: Record<string, Receita> = {
             { descricao: 'Abrir a massa em formato circular.', tempoSegundos: 10 },
             { descricao: 'Adicionar o recheio de carne no centro.', tempoSegundos: 5 },
             { descricao: 'Assar no forno a 250°C.', tempoSegundos: 20 }
+        ]
+    },
+    'Pizza Margherita': {
+        nome: 'Pizza Margherita',
+        ingredientes: ['1 kg de Farinha de Trigo'],
+        passos: [
+            { descricao: 'Separar a farinha da estação de montagem.', tempoSegundos: 8 },
+            { descricao: 'Abrir e preparar a massa da pizza.', tempoSegundos: 12 },
+            { descricao: 'Montar a pizza e levar ao forno.', tempoSegundos: 20 }
         ]
     }
 };
@@ -134,7 +157,7 @@ export default function TelaCozinha() {
 
     const carregarPedidos = async () => {
         try {
-            const response = await fetch(buildApiUrl('/api/pedidos'), {
+            const response = await fetch(buildApiUrl('/api/pedidos/cozinha'), {
                 headers: withTenantHeader()
             });
             if (response.ok) {
@@ -211,24 +234,55 @@ export default function TelaCozinha() {
         return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
     };
 
-    const concluirPedido = async (id: string) => {
+    const iniciarPedido = async (id: number) => {
         try {
-            const response = await fetch(buildApiUrl(`/api/pedidos/${id}/status`), {
+            const response = await fetch(buildApiUrl(`/api/pedidos/${id}/iniciar`), {
                 method: 'PUT',
                 headers: withTenantHeader({
                     'Content-Type': 'application/json',
-                }),
-                body: 'concluido' // Envia a string direta conforme esperado pelo Controller
+                })
+            });
+
+            if (response.ok) {
+                await carregarPedidos();
+                return;
+            }
+
+            setFeedback({
+                open: true,
+                title: 'Não foi possível iniciar',
+                message: 'O pedido não pôde ser movido para preparo.',
+                variant: 'error'
+            });
+        } catch (error) {
+            console.error('Erro ao iniciar pedido:', error);
+            setFeedback({
+                open: true,
+                title: 'Sem conexão',
+                message: 'Verifique a internet e tente novamente.',
+                variant: 'error'
+            });
+        }
+    };
+
+    const concluirPedido = async (pedido: Pedido) => {
+        try {
+            const response = await fetch(buildApiUrl(`/api/pedidos/${pedido.id}/pronto`), {
+                method: 'PUT',
+                headers: withTenantHeader({
+                    'Content-Type': 'application/json',
+                })
             });
 
             if (response.ok) {
                 // Remove da lista visual imediatamente para feedback rápido
-                setPedidos(prev => prev.filter(p => p.id !== id));
+                setPedidos(prev => prev.filter(p => p.id !== pedido.id));
             } else {
+                const message = await response.text();
                 setFeedback({
                     open: true,
                     title: 'Não foi possível concluir',
-                    message: 'Tente novamente em alguns segundos.',
+                    message: message || 'Tente novamente em alguns segundos.',
                     variant: 'error'
                 });
             }
@@ -261,8 +315,17 @@ export default function TelaCozinha() {
 
     // --- Lógica da Receita ---
 
-    const abrirReceita = (nomeItem: string) => {
-        const receita = MOCK_RECEITAS[nomeItem] || { ...DEFAULT_RECEITA, nome: nomeItem };
+    const abrirReceita = (item: ItemPedido) => {
+        const receitaMock = MOCK_RECEITAS[item.nomeProduto];
+        const receita = receitaMock || {
+            ...DEFAULT_RECEITA,
+            nome: item.nomeProduto,
+            ingredientes: item.ingredientes.length > 0
+                ? item.ingredientes.map(ingrediente => (
+                    `${ingrediente.quantidadeNecessaria} ${ingrediente.unidade} de ${ingrediente.nome}`
+                ))
+                : DEFAULT_RECEITA.ingredientes
+        };
         setReceitaAtiva(receita);
         setPassoAtual(0);
         setTempoRestante(receita.passos[0].tempoSegundos);
@@ -370,12 +433,59 @@ export default function TelaCozinha() {
                                 <span>{new Date(pedido.dataHora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                             </div>
 
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                                <span className="stat-badge stat-waiting" style={{ marginBottom: 0 }}>
+                                    <CheckSquare size={14} />
+                                    <span>{pedido.status === 'preparando' ? 'Em preparo' : 'Aguardando início'}</span>
+                                </span>
+                                <span
+                                    className={`stat-badge ${pedido.estoqueDisponivel ? 'stat-waiting' : 'stat-late'}`}
+                                    style={{ marginBottom: 0 }}
+                                >
+                                    <AlertTriangle size={14} />
+                                    <span>{pedido.estoqueDisponivel ? 'Montagem abastecida' : 'Falta insumo na montagem'}</span>
+                                </span>
+                            </div>
+
+                            {!pedido.estoqueDisponivel && (
+                                <div style={{
+                                    background: 'rgba(255, 183, 77, 0.12)',
+                                    border: '1px solid rgba(255, 183, 77, 0.35)',
+                                    borderRadius: '12px',
+                                    padding: '12px',
+                                    marginBottom: '16px',
+                                    color: '#FFE0B2'
+                                }}>
+                                    {pedido.pendenciasEstoque.map((pendencia, index) => (
+                                        <div key={`${pedido.id}-pendencia-${index}`} style={{ marginBottom: index === pedido.pendenciasEstoque.length - 1 ? 0 : '8px' }}>
+                                            {pendencia}
+                                        </div>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate('/estoque')}
+                                        style={{
+                                            marginTop: '12px',
+                                            background: '#FFB74D',
+                                            border: 'none',
+                                            borderRadius: '10px',
+                                            color: '#23180f',
+                                            fontWeight: 700,
+                                            padding: '10px 14px',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Ir para estoque
+                                    </button>
+                                </div>
+                            )}
+
                             <ul className="order-items">
                                 {pedido.itens.map(item => (
                                     <li 
                                         key={item.id} 
                                         className="order-item clickable-item"
-                                        onClick={() => abrirReceita(item.nomeProduto)}
+                                        onClick={() => abrirReceita(item)}
                                         title="Clique para ver a receita"
                                     >
                                         <span className="item-qty">{item.quantidade}</span>
@@ -384,6 +494,16 @@ export default function TelaCozinha() {
                                             {item.observacao && (
                                                 <span className="item-obs">⚠️ {item.observacao}</span>
                                             )}
+                                            {item.ingredientes.map(ingrediente => (
+                                                <span
+                                                    key={`${item.id}-${ingrediente.nome}`}
+                                                    className="item-obs"
+                                                    style={{ color: ingrediente.disponivel ? '#9CCC65' : '#FFB74D' }}
+                                                >
+                                                    {ingrediente.nome}: {ingrediente.quantidadeNecessaria} {ingrediente.unidade}
+                                                    {' '}| disponível {ingrediente.quantidadeDisponivel} {ingrediente.unidade}
+                                                </span>
+                                            ))}
                                         </div>
                                         <Video size={20} className="recipe-icon" />
                                     </li>
@@ -391,7 +511,22 @@ export default function TelaCozinha() {
                             </ul>
 
                             <div className="order-actions">
-                                <button className="btn-done" onClick={() => concluirPedido(pedido.id)}>
+                                {pedido.status !== 'preparando' && (
+                                    <button
+                                        className="btn-done"
+                                        onClick={() => iniciarPedido(pedido.id)}
+                                        style={{ background: '#2E7D32' }}
+                                    >
+                                        <Play size={24} style={{verticalAlign: 'middle', marginRight: '10px'}} />
+                                        INICIAR PREPARO
+                                    </button>
+                                )}
+                                <button
+                                    className="btn-done"
+                                    onClick={() => concluirPedido(pedido)}
+                                    disabled={!pedido.estoqueDisponivel}
+                                    style={!pedido.estoqueDisponivel ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+                                >
                                     <CheckCircle size={24} style={{verticalAlign: 'middle', marginRight: '10px'}} />
                                     PRONTO
                                 </button>

@@ -13,6 +13,7 @@ public class ItemPedido {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private Long produtoId;
     private String nomeProduto;
     private Integer quantidade;
     private String observacao;
