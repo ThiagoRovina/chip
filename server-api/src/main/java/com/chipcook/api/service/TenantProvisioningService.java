@@ -52,10 +52,6 @@ public class TenantProvisioningService {
              Statement stmt = conn.createStatement()) {
 
             stmt.execute("CREATE SCHEMA IF NOT EXISTS " + tenantId);
-
-            stmt.execute("GRANT USAGE ON SCHEMA " + tenantId + " TO chipcookuser");
-            stmt.execute("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA " + tenantId + " TO chipcookuser");
-            stmt.execute("GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA " + tenantId + " TO chipcookuser");
         }
     }
 }
