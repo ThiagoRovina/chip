@@ -10,7 +10,6 @@ import {
   UserPlus,
   Trash2,
   Edit,
-  Bell,
   User,
   Mail,
   ArrowLeft
@@ -28,7 +27,7 @@ const TelaUsuario: React.FC = () => {
   const navigate = useNavigate();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tenantName, setTenantName] = useState(' ');
+  const [tenantName, setTenantName] = useState('');
   const [feedback, setFeedback] = useState<{ open: boolean; title: string; message: string; variant: 'success' | 'error' | 'info'; }>({
     open: false,
     title: '',
@@ -37,8 +36,9 @@ const TelaUsuario: React.FC = () => {
   });
   const [confirmarExclusao, setConfirmarExclusao] = useState<Usuario | null>(null);
 
-  // Normaliza o cargo para garantir a comparação
   const userRole = (user as any)?.cargo?.toUpperCase() || 'GERENTE';
+  const tenantDisplayName = tenantName.trim() || 'ChipCook';
+  const roleLabel = userRole.charAt(0) + userRole.slice(1).toLowerCase();
 
   useEffect(() => {
     fetchUsuarios();
@@ -52,7 +52,7 @@ const TelaUsuario: React.FC = () => {
       });
       if (response.ok) {
         const data = await response.json();
-        setTenantName(data.name || ' ');
+        setTenantName(data.name || '');
       }
     } catch (error) {
       console.error('Erro ao buscar informações do tenant:', error);
@@ -127,31 +127,30 @@ const TelaUsuario: React.FC = () => {
               <button className="back-btn" onClick={() => navigate('/home')} aria-label="Voltar">
                   <ArrowLeft size={24} />
               </button>
-              <span className="nav-title">{tenantName}</span>
+              <span className="nav-title">{tenantDisplayName}</span>
           </div>
 
           <div className="nav-right">
-              <button className="icon-btn" title="Notificações" aria-label="3 novas notificações">
-                  <Bell size={24} />
-                  <span className="notification-badge"></span>
-              </button>
-              
               <div className="user-profile" role="group" aria-label="Menu do Usuário">
                   <div className="user-avatar" aria-hidden="true">
-                      {getInitials(user?.nmUsuario)}
+                      {user?.fotoPerfilUsuario ? (
+                        <img src={user.fotoPerfilUsuario} alt={`Foto de ${user.nmUsuario}`} />
+                      ) : (
+                        getInitials(user?.nmUsuario)
+                      )}
                   </div>
-                  <div className="user-info">
+                  <div className="user-nav-info">
                       <span className="user-name">{user?.nmUsuario || 'Usuário'}</span>
-                      <span className="user-role">{userRole}</span>
+                      <span className="user-role">{roleLabel}</span>
                   </div>
                   
                   <button 
-                      className="icon-btn" 
+                      className="logout-btn" 
                       onClick={handleLogout} 
                       title="Sair do sistema"
                       aria-label="Sair do sistema"
                   >
-                      <LogOut size={24} color="#D32F2F" />
+                      <LogOut size={18} />
                   </button>
               </div>
           </div>
@@ -162,13 +161,12 @@ const TelaUsuario: React.FC = () => {
         <div className="page-header">
           <div className="page-title">
             <h1>Gerenciar Equipe</h1>
+            <p className="page-subtitle">Centralize acessos, perfis e manutenção cadastral da operação.</p>
           </div>
-          <div style={{display: 'flex', gap: '10px'}}>
-            <button className="new-user-btn" onClick={() => navigate('/usuarios/cadastro')}>
-                <UserPlus size={24} /> 
-                <span>Adicionar Pessoa</span>
-            </button>
-          </div>
+          <button className="new-user-btn" onClick={() => navigate('/usuarios/cadastro')}>
+              <UserPlus size={20} /> 
+              <span>Adicionar pessoa</span>
+          </button>
         </div>
 
         {/* GRID DE CARTÕES (Visual e Intuitivo) */}
@@ -187,14 +185,13 @@ const TelaUsuario: React.FC = () => {
                 {/* Avatar Grande para Identificação Visual */}
                 <div className="card-avatar-large">
                   {u.fotoPerfilUsuario ? (
-                    <img src={u.fotoPerfilUsuario} alt={u.nmUsuario} style={{width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover'}} />
+                    <img src={u.fotoPerfilUsuario} alt={u.nmUsuario} className="user-card-photo" />
                   ) : (
                     getInitials(u.nmUsuario)
                   )}
                 </div>
 
-                {/* Informações Principais */}
-                <div className="user-info">
+                <div className="user-card-body">
                   <h3>{u.nmUsuario}</h3>
                   <p>
                     <Mail size={16} /> {u.nmEmailUsuario}

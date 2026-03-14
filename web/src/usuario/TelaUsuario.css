@@ -1,275 +1,401 @@
-/* TelaUsuario.css */
-
-/* --- LAYOUT GERAL --- */
 .dashboard-container {
+    min-height: 100vh;
+    background: #f8fafc;
+    color: #111827;
+}
+
+.top-nav {
+    min-height: 74px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #111111;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.nav-left,
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.back-btn {
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #f8fafc;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.back-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.24);
+}
+
+.nav-title {
+    color: #ffffff;
+    font-size: clamp(1.5rem, 2.5vw, 2rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+}
+
+.user-profile {
+    min-width: 160px;
+    min-height: 56px;
+    padding: 8px 10px;
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #f3f4f6;
+    color: #4b5563;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.88rem;
+    font-weight: 800;
+}
+
+.user-avatar img,
+.user-card-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.user-nav-info {
+    min-width: 0;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    background-color: #fff4e4; /* Fundo alterado para #fff4e4 */
+}
+
+.user-name {
+    color: #ffffff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-role {
+    color: rgba(255, 255, 255, 0.68);
+    font-size: 0.68rem;
+    font-weight: 600;
+}
+
+.logout-btn {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #ef4444;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.16s ease, color 0.16s ease;
+}
+
+.logout-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #f87171;
 }
 
 .main-content {
-    max-width: 1200px;
+    width: min(1200px, 100%);
     margin: 0 auto;
-    padding: 30px 20px;
-    width: 100%;
+    padding: 32px 20px 56px;
 }
 
-/* --- CABEÇALHO DA PÁGINA --- */
 .page-header {
+    margin-bottom: 28px;
     display: flex;
+    align-items: flex-end;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
+    gap: 16px;
     flex-wrap: wrap;
-    gap: 20px;
 }
 
 .page-title h1 {
-    font-size: 1.8rem;
-    color: #333;
     margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    color: #111827;
 }
 
-/* Botão Novo Usuário - Grande e Verde (Ação Positiva) */
+.page-subtitle {
+    margin: 8px 0 0;
+    color: #6b7280;
+    font-size: 0.96rem;
+}
+
 .new-user-btn {
-    background-color: #2E7D32; /* Verde para "Adicionar/Positivo" */
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 50px; /* Bem arredondado */
-    font-size: 1rem;
-    font-weight: bold;
-    cursor: pointer;
-    display: flex;
+    height: 46px;
+    padding: 0 18px;
+    border: 1px solid #111827;
+    border-radius: 14px;
+    background: #111827;
+    color: #ffffff;
+    display: inline-flex;
     align-items: center;
     gap: 10px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    transition: transform 0.2s, background-color 0.2s;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 12px 24px rgba(17, 24, 39, 0.12);
+    transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
 }
 
 .new-user-btn:hover {
-    background-color: #1B5E20;
-    transform: scale(1.05);
+    background: #1f2937;
+    transform: translateY(-1px);
+    box-shadow: 0 14px 28px rgba(17, 24, 39, 0.16);
 }
 
-/* Botão Voltar - Estilo similar mas neutro */
-.btn-voltar-listagem {
-    background-color: #fff;
-    color: #666;
-    border: 1px solid #ccc;
-    padding: 12px 24px;
-    border-radius: 50px;
-    font-size: 1rem;
-    font-weight: bold;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    transition: background-color 0.2s;
-}
-
-.btn-voltar-listagem:hover {
-    background-color: #f0f0f0;
-    color: #333;
-}
-
-/* --- GRID DE CARTÕES (Substitui a Tabela) --- */
 .user-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 25px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
 }
 
-/* --- CARTÃO DO USUÁRIO --- */
 .user-card {
-    background: white;
-    border-radius: 16px;
-    padding: 25px;
+    padding: 24px;
+    border: 1px solid #e5e7eb;
+    border-radius: 24px;
+    background: #ffffff;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
     display: flex;
     flex-direction: column;
-    align-items: center;
-    text-align: center;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    border: 2px solid transparent;
-    transition: all 0.3s ease;
-    position: relative;
+    align-items: flex-start;
+    gap: 16px;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
 }
 
 .user-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-    border-color: #ffebee;
+    transform: translateY(-2px);
+    border-color: #d1d5db;
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.1);
 }
 
-/* Avatar Grande */
 .card-avatar-large {
-    width: 90px;
-    height: 90px;
-    background-color: #FFEBEE;
-    color: #D32F2F;
-    border-radius: 50%;
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+    color: #111827;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2.5rem;
-    font-weight: bold;
-    margin-bottom: 15px;
-    border: 4px solid #fff;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    font-size: 1.25rem;
+    font-weight: 800;
+    overflow: hidden;
 }
 
-/* Informações */
-.user-info h3 {
-    margin: 0 0 5px 0;
-    color: #333;
-    font-size: 1.4rem;
-}
-
-.user-info p {
-    margin: 0;
-    color: #666;
-    font-size: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
-/* --- BOTÕES DE AÇÃO (Grandes e Claros) --- */
-.card-actions {
-    display: flex;
+.user-card-body {
     width: 100%;
-    gap: 15px;
-    margin-top: 25px;
-    padding-top: 20px;
-    border-top: 1px solid #eee;
 }
 
-/* Classe específica para botões dentro do card de usuário */
-.user-card .action-btn {
-    flex: 1;
-    height: 50px;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
+.user-card-body h3 {
+    margin: 0 0 8px;
+    font-size: 1.12rem;
+    font-weight: 800;
+    color: #111827;
+}
+
+.user-card-body p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.9rem;
     display: flex;
+    align-items: center;
+    gap: 8px;
+    word-break: break-word;
+}
+
+.card-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.user-card .action-btn {
+    height: 42px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    color: #111827;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    font-weight: bold;
-    font-size: 1rem;
-    transition: background 0.2s;
-    /* Resetando estilos que podem estar vindo de outros lugares */
-    flex-direction: row;
-    padding: 0;
-    box-shadow: none;
-    text-transform: none;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
 }
 
-/* Botão Editar (Azul/Neutro) */
-.btn-edit-card {
-    background-color: #1565C0; /* Azul mais escuro para melhor contraste */
-    color: white; /* Texto branco para contraste */
+.user-card .action-btn:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
 }
 
-.btn-edit-card:hover {
-    background-color: #0D47A1;
-}
-
-/* Botão Excluir (Vermelho/Perigo) */
 .btn-delete-card {
-    background-color: #C62828; /* Vermelho mais escuro para melhor contraste */
-    color: white; /* Texto branco para contraste */
+    color: #b91c1c;
+    background: #fef2f2;
+    border-color: #fecaca;
 }
 
 .btn-delete-card:hover {
-    background-color: #B71C1C;
+    background: #fee2e2;
+    border-color: #fca5a5;
 }
 
-/* Estado de Carregamento/Vazio */
 .empty-state {
     grid-column: 1 / -1;
+    min-height: 220px;
+    border: 1px dashed #d1d5db;
+    border-radius: 24px;
+    background: #ffffff;
+    color: #6b7280;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
     text-align: center;
-    padding: 50px;
-    color: #666;
-    font-size: 1.2rem;
+    padding: 24px;
 }
 
 .confirm-modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(15, 23, 42, 0.45);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1200;
     padding: 20px;
+    backdrop-filter: blur(4px);
 }
 
 .confirm-modal-content {
     width: 100%;
     max-width: 420px;
-    background: #fff;
-    border-radius: 16px;
+    background: #ffffff;
+    border-radius: 24px;
     padding: 24px;
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+    border: 1px solid #e5e7eb;
 }
 
 .confirm-modal-content h3 {
-    margin: 0 0 12px 0;
-    color: #C62828;
-    font-size: 1.4rem;
+    margin: 0 0 10px;
+    color: #111827;
+    font-size: 1.35rem;
 }
 
 .confirm-modal-content p {
-    margin: 0 0 20px 0;
-    color: #333;
-    line-height: 1.4;
+    margin: 0 0 20px;
+    color: #6b7280;
+    line-height: 1.5;
 }
 
 .confirm-modal-actions {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 10px;
 }
 
 .confirm-btn-cancel,
 .confirm-btn-delete {
-    flex: 1;
-    border: none;
+    height: 44px;
     border-radius: 12px;
-    padding: 12px 14px;
+    font-size: 0.92rem;
     font-weight: 700;
     cursor: pointer;
-    font-size: 0.95rem;
 }
 
 .confirm-btn-cancel {
-    background: #eee;
-    color: #333;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    color: #111827;
 }
 
 .confirm-btn-delete {
-    background: #C62828;
-    color: #fff;
+    border: 1px solid #ef4444;
+    background: #ef4444;
+    color: #ffffff;
 }
 
 .confirm-btn-delete:hover {
-    background: #B71C1C;
+    background: #dc2626;
 }
 
-/* Responsividade */
-@media (max-width: 600px) {
-    .page-header {
+.back-btn:focus-visible,
+.logout-btn:focus-visible,
+.new-user-btn:focus-visible,
+.user-card .action-btn:focus-visible,
+.confirm-btn-cancel:focus-visible,
+.confirm-btn-delete:focus-visible {
+    outline: 3px solid #93c5fd;
+    outline-offset: 3px;
+}
+
+@media (max-width: 720px) {
+    .top-nav {
+        padding: 12px 16px;
         flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .nav-right {
+        justify-content: flex-end;
+    }
+
+    .main-content {
+        padding: 24px 16px 40px;
+    }
+
+    .page-header {
         align-items: stretch;
     }
 
     .new-user-btn {
+        width: 100%;
         justify-content: center;
+    }
+}
+
+@media (max-width: 560px) {
+    .user-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .card-actions,
+    .confirm-modal-actions {
+        grid-template-columns: 1fr;
     }
 }

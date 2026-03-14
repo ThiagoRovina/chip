@@ -200,11 +200,15 @@ export default function TelaEstoque() {
     };
 
     const resetItemForm = () => {
+        const defaultCategoria = allowedCategories.includes('geral')
+            ? 'geral'
+            : (allowedCategories[0] ?? 'interno');
+
         setItemForm({
             nome: '',
             unidade: 'un',
             categoria: 'Geral',
-            categoriaEstoque: 'geral',
+            categoriaEstoque: defaultCategoria,
             imagem: '📦',
             validade: '',
             quantidade: 0
@@ -1050,17 +1054,21 @@ function normalizePerfil(cargo?: string): string {
 
     if (normalized.includes('dono')) return 'dono';
     if (normalized.includes('gerente')) return 'gerente';
-    if (normalized.includes('chefe')) return 'chefe_cozinha';
-    if (normalized.includes('produc')) return 'producao';
-    if (normalized.includes('montagem')) return 'montagem';
+    if (normalized.includes('chefe') || normalized.includes('chef')) return 'chefe_cozinha';
+    if (normalized.includes('montagem') || normalized.includes('chapeiro')) return 'montagem';
+    if (normalized.includes('produc')
+        || normalized.includes('cozinheiro')
+        || normalized.includes('estoquista')) return 'producao';
 
     return 'gerente';
 }
 
 function getAllowedCategories(perfil: string): CategoriaEstoque[] {
+    if (perfil === 'gerente') return ['geral', 'interno', 'porcao_geral', 'porcao'];
+    if (perfil === 'dono' || perfil === 'chefe_cozinha') return ['interno', 'porcao_geral', 'porcao'];
     if (perfil === 'producao') return ['interno', 'porcao_geral'];
     if (perfil === 'montagem') return ['porcao_geral', 'porcao'];
-    return ['geral', 'interno', 'porcao_geral', 'porcao'];
+    return ['interno', 'porcao_geral', 'porcao'];
 }
 
 function DashboardCard({ title, value, subtitle, color }: { title: string; value: string | number; subtitle: string; color: string }) {

@@ -75,6 +75,7 @@ public class EstoqueService {
     public EstoqueItem criar(EstoqueItem item, String perfil) {
         PerfilOperacionalEstoque perfilOperacional = PerfilOperacionalEstoque.from(perfil);
         validarOperacaoGerencial(perfilOperacional);
+        validarAcessoEstoqueGeral(perfilOperacional, item.getCategoriaEstoque());
 
         if (item.getQuantidade() == null) {
             item.setQuantidade(0.0);
@@ -89,6 +90,8 @@ public class EstoqueService {
         validarOperacaoGerencial(perfilOperacional);
 
         EstoqueItem itemExistente = buscarPorId(id);
+        validarAcessoEstoqueGeral(perfilOperacional, itemExistente.getCategoriaEstoque());
+        validarAcessoEstoqueGeral(perfilOperacional, itemAtualizado.getCategoriaEstoque());
 
         itemExistente.setNome(itemAtualizado.getNome());
         itemExistente.setQuantidade(itemAtualizado.getQuantidade());
@@ -110,6 +113,7 @@ public class EstoqueService {
         validarOperacaoGerencial(perfilOperacional);
 
         EstoqueItem item = buscarPorId(id);
+        validarAcessoEstoqueGeral(perfilOperacional, item.getCategoriaEstoque());
         estoqueRepository.delete(item);
     }
 
@@ -199,6 +203,7 @@ public class EstoqueService {
 
         PerfilOperacionalEstoque perfil = PerfilOperacionalEstoque.from(dto.getPerfil());
         validarOperacaoGerencial(perfil);
+        validarAcessoEstoqueGeral(perfil, CategoriaEstoque.GERAL);
 
         EstoqueItem itemOrigem = buscarPorId(dto.getItemOrigemId());
         if (itemOrigem.getCategoriaEstoque() != CategoriaEstoque.GERAL) {
@@ -276,6 +281,11 @@ public class EstoqueService {
     }
 
     private void validarAcessoCategoria(PerfilOperacionalEstoque perfil, CategoriaEstoque categoria) {
+        if (categoria == CategoriaEstoque.GERAL) {
+            validarAcessoEstoqueGeral(perfil, categoria);
+            return;
+        }
+
         if (perfil == PerfilOperacionalEstoque.DONO
                 || perfil == PerfilOperacionalEstoque.GERENTE
                 || perfil == PerfilOperacionalEstoque.CHEFE_COZINHA) {
@@ -290,6 +300,12 @@ public class EstoqueService {
 
         if (!autorizado) {
             throw new IllegalArgumentException("Perfil sem acesso a esta categoria de estoque");
+        }
+    }
+
+    private void validarAcessoEstoqueGeral(PerfilOperacionalEstoque perfil, CategoriaEstoque categoria) {
+        if (categoria == CategoriaEstoque.GERAL && perfil != PerfilOperacionalEstoque.GERENTE) {
+            throw new IllegalArgumentException("Apenas gerente pode acessar o estoque geral");
         }
     }
 

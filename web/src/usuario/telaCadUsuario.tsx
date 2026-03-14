@@ -6,7 +6,6 @@ import { withTenantHeader } from '../utils/tenant';
 import "./telaCadUsuario.css";
 import { 
   LogOut, 
-  Bell,
   User,
   ArrowLeft,
   Save,
@@ -21,7 +20,7 @@ export default function TelaCadUsuario() {
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [tenantName, setTenantName] = useState(' ');
+    const [tenantName, setTenantName] = useState('');
     const [confirmarSalvarAberto, setConfirmarSalvarAberto] = useState(false);
     const [retornoSalvar, setRetornoSalvar] = useState<{
         aberto: boolean;
@@ -35,8 +34,9 @@ export default function TelaCadUsuario() {
         mensagem: ''
     });
     
-    // Normaliza o cargo para garantir a comparação
     const userRole = (user as any)?.cargo?.toUpperCase() || 'GERENTE';
+    const tenantDisplayName = tenantName.trim() || 'ChipCook';
+    const roleLabel = userRole.charAt(0) + userRole.slice(1).toLowerCase();
 
     // State for all fields
     const [formData, setFormData] = useState({
@@ -79,7 +79,7 @@ export default function TelaCadUsuario() {
           });
           if (response.ok) {
             const data = await response.json();
-            setTenantName(data.name || ' ');
+            setTenantName(data.name || '');
           }
         } catch (error) {
           console.error('Erro ao buscar informações do tenant:', error);
@@ -363,31 +363,30 @@ export default function TelaCadUsuario() {
                     <button className="back-btn" onClick={() => navigate('/home')} aria-label="Voltar">
                         <ArrowLeft size={24} />
                     </button>
-                    <span className="nav-title">{tenantName}</span>
+                    <span className="nav-title">{tenantDisplayName}</span>
                 </div>
 
                 <div className="nav-right">
-                    <button className="icon-btn" title="Notificações" aria-label="3 novas notificações">
-                        <Bell size={24} />
-                        <span className="notification-badge"></span>
-                    </button>
-                    
                     <div className="user-profile" role="group" aria-label="Menu do Usuário">
                         <div className="user-avatar" aria-hidden="true">
-                            {getInitials(user?.nmUsuario)}
+                            {user?.fotoPerfilUsuario ? (
+                                <img src={user.fotoPerfilUsuario} alt={`Foto de ${user.nmUsuario}`} />
+                            ) : (
+                                getInitials(user?.nmUsuario)
+                            )}
                         </div>
-                        <div className="user-info">
+                        <div className="user-nav-info">
                             <span className="user-name">{user?.nmUsuario || 'Usuário'}</span>
-                            <span className="user-role">{userRole}</span>
+                            <span className="user-role">{roleLabel}</span>
                         </div>
                         
                         <button 
-                            className="icon-btn" 
+                            className="logout-btn" 
                             onClick={handleLogout} 
                             title="Sair do sistema"
                             aria-label="Sair do sistema"
                         >
-                            <LogOut size={24} color="#D32F2F" />
+                            <LogOut size={18} />
                         </button>
                     </div>
                 </div>
@@ -397,6 +396,7 @@ export default function TelaCadUsuario() {
                 <div className="page-header">
                     <div className="page-title">
                         <h1>{id ? 'Editar Usuário' : 'Novo Usuário'}</h1>
+                        <p className="page-subtitle">Preencha os dados operacionais, contato e acesso em uma única ficha.</p>
                     </div>
                 </div>
 
@@ -409,25 +409,12 @@ export default function TelaCadUsuario() {
                         
                         <div className="form-grid">
                             {/* Foto de Perfil */}
-                            <div className="form-group full-width" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px'}}>
+                            <div className="form-group full-width profile-photo-group">
                                 <div 
-                                    className="profile-photo-preview" 
-                                    style={{
-                                        width: '120px', 
-                                        height: '120px', 
-                                        borderRadius: '50%', 
-                                        backgroundColor: '#f0f0f0', 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        justifyContent: 'center',
-                                        overflow: 'hidden',
-                                        marginBottom: '10px',
-                                        border: '3px solid #fff',
-                                        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-                                    }}
+                                    className="profile-photo-preview"
                                 >
                                     {previewUrl ? (
-                                        <img src={previewUrl} alt="Preview" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                                        <img src={previewUrl} alt="Preview" className="profile-photo-image" />
                                     ) : (
                                         <User size={60} color="#ccc" />
                                     )}
@@ -443,17 +430,6 @@ export default function TelaCadUsuario() {
                                     type="button" 
                                     className="btn-upload-photo"
                                     onClick={triggerFileInput}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px',
-                                        padding: '8px 16px',
-                                        borderRadius: '20px',
-                                        border: '1px solid #ddd',
-                                        background: '#fff',
-                                        cursor: 'pointer',
-                                        fontSize: '0.9rem'
-                                    }}
                                 >
                                     <Camera size={18} />
                                     Alterar Foto
@@ -736,7 +712,7 @@ export default function TelaCadUsuario() {
                         <h3 id="acesso-title">Dados de Acesso</h3>
                         <div className="form-grid">
                             <div className="form-group">
-                                <label htmlFor="dsSenhaUsuario">Senha {id && <span style={{fontWeight:'normal', fontSize:'0.8rem', color:'#666'}}>(Deixe em branco para manter)</span>} {!id && <span className="required">*</span>}</label>
+                                <label htmlFor="dsSenhaUsuario">Senha {id && <span className="field-hint">(Deixe em branco para manter)</span>} {!id && <span className="required">*</span>}</label>
                                 <input 
                                     id="dsSenhaUsuario"
                                     name="dsSenhaUsuario"
@@ -771,7 +747,7 @@ export default function TelaCadUsuario() {
                         </button>
 
                         <button type="submit" className="btn-salvar" disabled={saving}>
-                            <Save size={20} style={{marginRight: '8px'}} />
+                            <Save size={20} className="save-icon" />
                             {saving ? 'Salvando...' : id ? 'Atualizar Cadastro' : 'Salvar Cadastro'}
                         </button>
                     </div>

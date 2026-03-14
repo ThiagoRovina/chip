@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Bell, ChefHat, LogOut, Package, Pencil, Plus, Save, Trash2, Video } from 'lucide-react';
+import { ArrowLeft, ChefHat, LogOut, Package, Pencil, Plus, Save, Trash2, Video, X } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { buildApiUrl } from '../utils/api';
 import { withTenantHeader } from '../utils/tenant';
@@ -58,12 +58,13 @@ const createEmptyProduto = (): Produto => ({
 export default function TelaCardapio() {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
-    const [tenantName, setTenantName] = useState(' ');
+    const [tenantName, setTenantName] = useState('');
     const [produtos, setProdutos] = useState<Produto[]>([]);
     const [estoqueItems, setEstoqueItems] = useState<EstoqueItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
+    const [formOpen, setFormOpen] = useState(false);
     const [form, setForm] = useState<Produto>(createEmptyProduto());
     const [feedback, setFeedback] = useState<{ open: boolean; title: string; message: string; variant: 'success' | 'error' | 'info' }>({
         open: false,
@@ -73,6 +74,8 @@ export default function TelaCardapio() {
     });
 
     const userRole = (user as any)?.cargo?.toUpperCase() || 'GERENTE';
+    const tenantDisplayName = tenantName.trim() || 'ChipCook';
+    const roleLabel = userRole.charAt(0) + userRole.slice(1).toLowerCase();
 
     useEffect(() => {
         fetchTenantInfo();
@@ -87,7 +90,7 @@ export default function TelaCardapio() {
             });
             if (response.ok) {
                 const data = await response.json();
-                setTenantName(data.name || ' ');
+                setTenantName(data.name || '');
             }
         } catch (error) {
             console.error('Erro ao buscar tenant:', error);
@@ -209,6 +212,7 @@ export default function TelaCardapio() {
     const startCreate = () => {
         setEditingId(null);
         setForm(createEmptyProduto());
+        setFormOpen(true);
     };
 
     const startEdit = (produto: Produto) => {
@@ -220,6 +224,13 @@ export default function TelaCardapio() {
                 : [{ nomeItemEstoque: '', quantidade: 1, unidade: '' }],
             passos: produto.passos?.length ? produto.passos : [{ descricao: '', tempoSegundos: 0, videoUrl: '' }]
         });
+        setFormOpen(true);
+    };
+
+    const closeForm = () => {
+        setFormOpen(false);
+        setEditingId(null);
+        setForm(createEmptyProduto());
     };
 
     const normalizeProduto = (produto: Produto) => ({
@@ -266,8 +277,7 @@ export default function TelaCardapio() {
                 message: editingId ? 'Produto atualizado com sucesso.' : 'Produto criado com sucesso.',
                 variant: 'success'
             });
-            setForm(createEmptyProduto());
-            setEditingId(null);
+            closeForm();
             await fetchProdutos();
         } catch (error) {
             console.error('Erro ao salvar produto:', error);
@@ -297,8 +307,7 @@ export default function TelaCardapio() {
             }
 
             if (editingId === produtoId) {
-                setEditingId(null);
-                setForm(createEmptyProduto());
+                closeForm();
             }
 
             setFeedback({
@@ -326,21 +335,23 @@ export default function TelaCardapio() {
                     <button className="back-btn" onClick={() => navigate('/home')} aria-label="Voltar">
                         <ArrowLeft size={24} />
                     </button>
-                    <span className="nav-title">{tenantName}</span>
+                    <span className="nav-title">{tenantDisplayName}</span>
                 </div>
                 <div className="nav-right">
-                    <button className="icon-btn" title="Notificações">
-                        <Bell size={24} />
-                        <span className="notification-badge"></span>
-                    </button>
                     <div className="user-profile">
-                        <div className="user-avatar">{getInitials(user?.nmUsuario)}</div>
+                        <div className="user-avatar">
+                            {user?.fotoPerfilUsuario ? (
+                                <img src={user.fotoPerfilUsuario} alt={`Foto de ${user.nmUsuario}`} />
+                            ) : (
+                                getInitials(user?.nmUsuario)
+                            )}
+                        </div>
                         <div className="user-info">
                             <span className="user-name">{user?.nmUsuario || 'Usuário'}</span>
-                            <span className="user-role">{userRole}</span>
+                            <span className="user-role">{roleLabel}</span>
                         </div>
-                        <button className="icon-btn" onClick={handleLogout} title="Sair">
-                            <LogOut size={24} color="#D32F2F" />
+                        <button className="logout-btn" onClick={handleLogout} title="Sair">
+                            <LogOut size={18} />
                         </button>
                     </div>
                 </div>
@@ -349,9 +360,10 @@ export default function TelaCardapio() {
             <main className="cardapio-content">
                 <section className="cardapio-list-panel">
                     <div className="section-header">
-                        <div>
+                        <div className="section-copy">
                             <p className="eyebrow">Cardápio</p>
                             <h1>Produtos e receitas</h1>
+                            <p className="section-description">Gerencie itens, disponibilidade e relação com o estoque em um só lugar.</p>
                         </div>
                         <button className="primary-action" onClick={startCreate}>
                             <Plus size={18} />
@@ -369,7 +381,7 @@ export default function TelaCardapio() {
                                 <article key={produto.id} className={`produto-card ${editingId === produto.id ? 'selected' : ''}`}>
                                     <div className="produto-card-top">
                                         <span className="produto-emoji">{produto.imagem || '🍽️'}</span>
-                                        <div>
+                                        <div className="produto-title-block">
                                             <h3>{produto.nome}</h3>
                                             <p>{produto.categoria}</p>
                                         </div>
@@ -384,7 +396,7 @@ export default function TelaCardapio() {
                                         <span>{produto.passos?.length || 0} passos</span>
                                     </div>
                                     {produto.disponivelVenda === false && produto.motivoIndisponibilidade && (
-                                        <p style={{ marginTop: '10px', color: '#B71C1C', fontWeight: 700 }}>
+                                        <p className="produto-warning">
                                             {produto.motivoIndisponibilidade}
                                         </p>
                                     )}
@@ -403,149 +415,162 @@ export default function TelaCardapio() {
                         </div>
                     )}
                 </section>
+            </main>
 
-                <section className="cardapio-form-panel">
-                    <div className="section-header">
-                        <div>
-                            <p className="eyebrow">{editingId ? 'Edição' : 'Cadastro'}</p>
-                            <h2>{editingId ? 'Editar produto' : 'Novo produto'}</h2>
+            {formOpen && (
+                <div className="cardapio-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) closeForm(); }}>
+                    <section className="cardapio-form-panel cardapio-modal" aria-labelledby="cardapio-form-title">
+                        <div className="section-header cardapio-modal-header">
+                            <div className="section-copy">
+                                <p className="eyebrow">{editingId ? 'Edição' : 'Cadastro'}</p>
+                                <h2 id="cardapio-form-title">{editingId ? 'Editar produto' : 'Novo produto'}</h2>
+                                <p className="section-description">Organize ficha técnica, ingredientes vinculados e instruções operacionais.</p>
+                            </div>
+                            <button type="button" className="modal-close-btn" onClick={closeForm} aria-label="Fechar formulário">
+                                <X size={18} />
+                            </button>
                         </div>
-                    </div>
 
-                    <form className="produto-form" onSubmit={saveProduto}>
-                        <div className="form-grid">
+                        <form className="produto-form" onSubmit={saveProduto}>
+                            <div className="form-grid">
+                                <label>
+                                    Nome
+                                    <input value={form.nome} onChange={(e) => updateField('nome', e.target.value)} required />
+                                </label>
+                                <label>
+                                    Categoria
+                                    <input value={form.categoria} onChange={(e) => updateField('categoria', e.target.value)} required />
+                                </label>
+                                <label>
+                                    Preço
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={form.preco}
+                                        onChange={(e) => updateField('preco', Number(e.target.value))}
+                                        required
+                                    />
+                                </label>
+                                <label>
+                                    Imagem/emoji
+                                    <input value={form.imagem} onChange={(e) => updateField('imagem', e.target.value)} placeholder="🍔 ou URL" />
+                                </label>
+                            </div>
+
                             <label>
-                                Nome
-                                <input value={form.nome} onChange={(e) => updateField('nome', e.target.value)} required />
+                                Descrição
+                                <textarea value={form.descricao} onChange={(e) => updateField('descricao', e.target.value)} rows={3} />
                             </label>
-                            <label>
-                                Categoria
-                                <input value={form.categoria} onChange={(e) => updateField('categoria', e.target.value)} required />
-                            </label>
-                            <label>
-                                Preço
+
+                            <label className="toggle-field">
                                 <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={form.preco}
-                                    onChange={(e) => updateField('preco', Number(e.target.value))}
-                                    required
+                                    type="checkbox"
+                                    checked={form.disponivel}
+                                    onChange={(e) => updateField('disponivel', e.target.checked)}
                                 />
+                                Produto disponível para pedido
                             </label>
-                            <label>
-                                Imagem/emoji
-                                <input value={form.imagem} onChange={(e) => updateField('imagem', e.target.value)} placeholder="🍔 ou URL" />
-                            </label>
-                        </div>
 
-                        <label>
-                            Descrição
-                            <textarea value={form.descricao} onChange={(e) => updateField('descricao', e.target.value)} rows={3} />
-                        </label>
-
-                        <label className="toggle-field">
-                            <input
-                                type="checkbox"
-                                checked={form.disponivel}
-                                onChange={(e) => updateField('disponivel', e.target.checked)}
-                            />
-                            Produto disponível para pedido
-                        </label>
-
-                        <div className="form-section">
-                            <div className="subsection-header">
-                                <h3><Package size={18} /> Ingredientes</h3>
-                                <button type="button" onClick={addIngrediente}>Adicionar</button>
-                            </div>
-                            <div className="dynamic-list">
-                                {form.ingredientes.map((ingrediente, index) => (
-                                    <div key={`ingrediente-${index}`} className="dynamic-row dynamic-row-ingrediente">
-                                        <select
-                                            value={ingrediente.estoqueItemId ?? ''}
-                                            onChange={(e) => updateIngrediente(index, e.target.value, 'estoqueItemId')}
-                                        >
-                                            <option value="">Selecione um item do estoque</option>
-                                            {estoqueItems.map(item => (
-                                                <option key={item.id} value={item.id}>
-                                                    {item.nome} | {item.quantidade} {item.unidade} | {formatCategoriaEstoque(item.categoriaEstoque)}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <input
-                                            type="number"
-                                            min="0.01"
-                                            step="0.01"
-                                            value={ingrediente.quantidade}
-                                            onChange={(e) => updateIngrediente(index, Number(e.target.value), 'quantidade')}
-                                            placeholder="Qtd."
-                                        />
-                                        <input value={ingrediente.unidade} disabled placeholder="Unidade" />
-                                        <button type="button" onClick={() => removeIngrediente(index)} disabled={form.ingredientes.length === 1}>
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="form-section">
-                            <div className="subsection-header">
-                                <h3><ChefHat size={18} /> Passos com vídeo</h3>
-                                <button type="button" onClick={addPasso}>Adicionar passo</button>
-                            </div>
-                            <div className="dynamic-steps">
-                                {form.passos.map((passo, index) => (
-                                    <div key={`passo-${index}`} className="step-card">
-                                        <div className="step-card-header">
-                                            <span>Passo {index + 1}</span>
-                                            <button type="button" onClick={() => removePasso(index)} disabled={form.passos.length === 1}>
+                            <div className="form-section">
+                                <div className="subsection-header">
+                                    <h3><Package size={18} /> Ingredientes</h3>
+                                    <button type="button" onClick={addIngrediente}>Adicionar</button>
+                                </div>
+                                <div className="dynamic-list">
+                                    {form.ingredientes.map((ingrediente, index) => (
+                                        <div key={`ingrediente-${index}`} className="dynamic-row dynamic-row-ingrediente">
+                                            <select
+                                                value={ingrediente.estoqueItemId ?? ''}
+                                                onChange={(e) => updateIngrediente(index, e.target.value, 'estoqueItemId')}
+                                            >
+                                                <option value="">Selecione um item do estoque</option>
+                                                {estoqueItems.map(item => (
+                                                    <option key={item.id} value={item.id}>
+                                                        {item.nome} | {item.quantidade} {item.unidade} | {formatCategoriaEstoque(item.categoriaEstoque)}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <input
+                                                type="number"
+                                                min="0.01"
+                                                step="0.01"
+                                                value={ingrediente.quantidade}
+                                                onChange={(e) => updateIngrediente(index, Number(e.target.value), 'quantidade')}
+                                                placeholder="Qtd."
+                                            />
+                                            <input value={ingrediente.unidade} disabled placeholder="Unidade" />
+                                            <button type="button" onClick={() => removeIngrediente(index)} disabled={form.ingredientes.length === 1}>
                                                 <Trash2 size={16} />
                                             </button>
                                         </div>
-                                        <textarea
-                                            value={passo.descricao}
-                                            onChange={(e) => updatePasso(index, 'descricao', e.target.value)}
-                                            rows={2}
-                                            placeholder="Descreva a execução da etapa"
-                                        />
-                                        <div className="form-grid">
-                                            <label>
-                                                Tempo (segundos)
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    value={passo.tempoSegundos}
-                                                    onChange={(e) => updatePasso(index, 'tempoSegundos', Number(e.target.value))}
-                                                />
-                                            </label>
-                                            <label>
-                                                URL do vídeo
-                                                <input
-                                                    value={passo.videoUrl}
-                                                    onChange={(e) => updatePasso(index, 'videoUrl', e.target.value)}
-                                                    placeholder="https://..."
-                                                />
-                                            </label>
-                                        </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
-                        </div>
 
-                        <div className="form-footer">
-                            <div className="hint">
-                                <Video size={16} />
-                                Os ingredientes do produto são escolhidos a partir do estoque e cada etapa pode ter seu próprio vídeo.
+                            <div className="form-section">
+                                <div className="subsection-header">
+                                    <h3><ChefHat size={18} /> Passos com vídeo</h3>
+                                    <button type="button" onClick={addPasso}>Adicionar passo</button>
+                                </div>
+                                <div className="dynamic-steps">
+                                    {form.passos.map((passo, index) => (
+                                        <div key={`passo-${index}`} className="step-card">
+                                            <div className="step-card-header">
+                                                <span>Passo {index + 1}</span>
+                                                <button type="button" onClick={() => removePasso(index)} disabled={form.passos.length === 1}>
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                            <textarea
+                                                value={passo.descricao}
+                                                onChange={(e) => updatePasso(index, 'descricao', e.target.value)}
+                                                rows={2}
+                                                placeholder="Descreva a execução da etapa"
+                                            />
+                                            <div className="form-grid">
+                                                <label>
+                                                    Tempo (segundos)
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        value={passo.tempoSegundos}
+                                                        onChange={(e) => updatePasso(index, 'tempoSegundos', Number(e.target.value))}
+                                                    />
+                                                </label>
+                                                <label>
+                                                    URL do vídeo
+                                                    <input
+                                                        value={passo.videoUrl}
+                                                        onChange={(e) => updatePasso(index, 'videoUrl', e.target.value)}
+                                                        placeholder="https://..."
+                                                    />
+                                                </label>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                            <button type="submit" className="primary-action" disabled={saving}>
-                                <Save size={18} />
-                                {saving ? 'Salvando...' : 'Salvar produto'}
-                            </button>
-                        </div>
-                    </form>
-                </section>
-            </main>
+
+                            <div className="form-footer">
+                                <div className="hint">
+                                    <Video size={16} />
+                                    Os ingredientes do produto são escolhidos a partir do estoque e cada etapa pode ter seu próprio vídeo.
+                                </div>
+                                <div className="form-footer-actions">
+                                    <button type="button" className="secondary-action" onClick={closeForm}>
+                                        Cancelar
+                                    </button>
+                                    <button type="submit" className="primary-action" disabled={saving}>
+                                        <Save size={18} />
+                                        {saving ? 'Salvando...' : 'Salvar produto'}
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </section>
+                </div>
+            )}
 
             <FeedbackModal
                 open={feedback.open}

@@ -7,7 +7,6 @@ import "./TelaPrincipal.css";
 import {
     Users,
     LogOut,
-    Bell,
     UtensilsCrossed,
     ChefHat,
     ClipboardList,
@@ -61,9 +60,8 @@ const MENU_ITEMS = [
 export default function TelaPrincipal() {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
-    const [tenantName, setTenantName] = useState(' ');
+    const [tenantName, setTenantName] = useState('');
 
-    // Normaliza o cargo para garantir a comparação
     const userRole = (user as any)?.cargo?.toUpperCase() || 'GERENTE';
 
     useEffect(() => {
@@ -77,7 +75,7 @@ export default function TelaPrincipal() {
             });
             if (response.ok) {
                 const data = await response.json();
-                setTenantName(data.name || ' ');
+                setTenantName(data.name || '');
             }
         } catch (error) {
             console.error('Erro ao buscar informações do tenant:', error);
@@ -94,58 +92,55 @@ export default function TelaPrincipal() {
         return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
     };
 
-    // Filtra os itens baseado no cargo do usuário
     const allowedMenuItems = MENU_ITEMS.filter(item => item.roles.includes(userRole));
+    const tenantDisplayName = tenantName.trim() || 'ChipCook';
+    const firstName = user?.nmUsuario?.split(' ')[0] || 'Visitante';
+    const roleLabel = userRole.charAt(0) + userRole.slice(1).toLowerCase();
 
     return (
         <div className="dashboard-container">
-            {/* --- NAVBAR ACESSÍVEL --- */}
             <nav className="top-nav" aria-label="Navegação Principal">
                 <div className="nav-left">
-                    <span className="nav-title">{tenantName}</span>
+                    <span className="nav-title">{tenantDisplayName}</span>
                 </div>
 
                 <div className="nav-right">
-                    <button className="icon-btn" title="Notificações" aria-label="3 novas notificações">
-                        <Bell size={24} />
-                        <span className="notification-badge"></span>
-                    </button>
-
                     <div className="user-profile" role="group" aria-label="Menu do Usuário">
                         <div className="user-avatar" aria-hidden="true">
-                            {getInitials(user?.nmUsuario)}
+                            {user?.fotoPerfilUsuario ? (
+                                <img src={user.fotoPerfilUsuario} alt={`Foto de ${user.nmUsuario}`} />
+                            ) : (
+                                getInitials(user?.nmUsuario)
+                            )}
                         </div>
                         <div className="user-info">
                             <span className="user-name">{user?.nmUsuario || 'Usuário'}</span>
-                            <span className="user-role">{userRole}</span>
+                            <span className="user-role">{roleLabel}</span>
                         </div>
-
                         <button
-                            className="icon-btn"
+                            className="logout-btn"
                             onClick={handleLogout}
                             title="Sair do sistema"
                             aria-label="Sair do sistema"
                         >
-                            <LogOut size={24} color="#D32F2F" />
+                            <LogOut size={18} />
                         </button>
                     </div>
                 </div>
             </nav>
 
-            {/* --- HERO SECTION (FULL WIDTH) --- */}
             <header className="welcome-section">
                 <div className="welcome-content">
-                    <h1>Olá, {user?.nmUsuario?.split(' ')[0] || 'Visitante'}! 👋</h1>
-                    <p>Bem-vindo ao painel de controle do <strong>{tenantName}</strong>. O que você deseja gerenciar hoje?</p>
+                    <p className="welcome-greeting">Olá, {firstName}! 👋</p>
+                    <p className="welcome-description">Bem-vindo ao painel de controle do {tenantDisplayName}. O que você deseja gerenciar hoje?</p>
                 </div>
             </header>
 
-            {/* --- CONTEÚDO PRINCIPAL --- */}
             <main className="main-content">
-
-                {/* ACESSO RÁPIDO */}
                 <section aria-labelledby="quick-access-title">
-                    <h2 id="quick-access-title" className="section-title">Acesso Rápido</h2>
+                    <div className="section-header">
+                        <h2 id="quick-access-title" className="section-title">Acesso rápido</h2>
+                    </div>
 
                     {allowedMenuItems.length > 0 ? (
                         <div className="cards-grid">
@@ -159,18 +154,19 @@ export default function TelaPrincipal() {
                                     <div className="card-icon">
                                         {item.icon}
                                     </div>
-                                    <h3>{item.title}</h3>
-                                    <p>{item.description}</p>
+                                    <div className="card-content">
+                                        <h3>{item.title}</h3>
+                                        <p>{item.description}</p>
+                                    </div>
                                 </button>
                             ))}
                         </div>
                     ) : (
-                        <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', textAlign: 'center' }}>
+                        <div className="empty-state">
                             <p>Seu perfil ({userRole}) não possui acessos rápidos configurados.</p>
                         </div>
                     )}
                 </section>
-
             </main>
         </div>
     );
