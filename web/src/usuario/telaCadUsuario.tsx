@@ -37,6 +37,8 @@ export default function TelaCadUsuario() {
     const userRole = (user as any)?.cargo?.toUpperCase() || 'GERENTE';
     const tenantDisplayName = tenantName.trim() || 'ChipCook';
     const roleLabel = userRole.charAt(0) + userRole.slice(1).toLowerCase();
+    const isEditingOwnUser = Boolean(id && user?.idUsuario === id);
+    const shouldShowPasswordSection = !id || isEditingOwnUser;
 
     // State for all fields
     const [formData, setFormData] = useState({
@@ -231,7 +233,7 @@ export default function TelaCadUsuario() {
             });
             return;
         }
-        if (id && formData.dsSenhaUsuario && formData.dsSenhaUsuario !== formData.dsSenhaConfirmacao) {
+        if (shouldShowPasswordSection && id && formData.dsSenhaUsuario && formData.dsSenhaUsuario !== formData.dsSenhaConfirmacao) {
             setRetornoSalvar({
                 aberto: true,
                 sucesso: false,
@@ -252,7 +254,7 @@ export default function TelaCadUsuario() {
             const usuarioData = {
                 nmUsuario: formData.nmUsuario,
                 nmEmailUsuario: formData.nmEmailUsuario,
-                dsSenhaUsuario: formData.dsSenhaUsuario, // Pode ser vazio na edição
+                dsSenhaUsuario: shouldShowPasswordSection ? formData.dsSenhaUsuario : '',
                 fotoPerfilUsuario: formData.fotoPerfilUsuario, // Mantém a URL antiga se não houver nova foto
                 funcionario: {
                     nmFuncionario: formData.nmUsuario,
@@ -707,37 +709,38 @@ export default function TelaCadUsuario() {
                         </div>
                     </section>
 
-                    {/* ACESSO */}
-                    <section className="card" aria-labelledby="acesso-title">
-                        <h3 id="acesso-title">Dados de Acesso</h3>
-                        <div className="form-grid">
-                            <div className="form-group">
-                                <label htmlFor="dsSenhaUsuario">Senha {id && <span className="field-hint">(Deixe em branco para manter)</span>} {!id && <span className="required">*</span>}</label>
-                                <input 
-                                    id="dsSenhaUsuario"
-                                    name="dsSenhaUsuario"
-                                    type="password" 
-                                    placeholder="******" 
-                                    value={formData.dsSenhaUsuario}
-                                    onChange={handleChange}
-                                    required={!id}
-                                />
-                            </div>
+                    {shouldShowPasswordSection && (
+                        <section className="card" aria-labelledby="acesso-title">
+                            <h3 id="acesso-title">Dados de Acesso</h3>
+                            <div className="form-grid">
+                                <div className="form-group">
+                                    <label htmlFor="dsSenhaUsuario">Senha {id && <span className="field-hint">(Deixe em branco para manter)</span>} {!id && <span className="required">*</span>}</label>
+                                    <input 
+                                        id="dsSenhaUsuario"
+                                        name="dsSenhaUsuario"
+                                        type="password" 
+                                        placeholder="******" 
+                                        value={formData.dsSenhaUsuario}
+                                        onChange={handleChange}
+                                        required={!id}
+                                    />
+                                </div>
 
-                            <div className="form-group">
-                                <label htmlFor="dsSenhaConfirmacao">Confirmar Senha {!id && <span className="required">*</span>}</label>
-                                <input 
-                                    id="dsSenhaConfirmacao"
-                                    name="dsSenhaConfirmacao"
-                                    type="password" 
-                                    placeholder="******" 
-                                    value={formData.dsSenhaConfirmacao}
-                                    onChange={handleChange}
-                                    required={!id}
-                                />
+                                <div className="form-group">
+                                    <label htmlFor="dsSenhaConfirmacao">Confirmar Senha {!id && <span className="required">*</span>}</label>
+                                    <input 
+                                        id="dsSenhaConfirmacao"
+                                        name="dsSenhaConfirmacao"
+                                        type="password" 
+                                        placeholder="******" 
+                                        value={formData.dsSenhaConfirmacao}
+                                        onChange={handleChange}
+                                        required={!id}
+                                    />
+                                </div>
                             </div>
-                        </div>
-                    </section>
+                        </section>
+                    )}
 
                     {/* ACTIONS */}
                     <div className="actions">

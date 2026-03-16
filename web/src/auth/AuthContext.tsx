@@ -5,12 +5,30 @@ import { buildApiUrl } from '../utils/api';
 
 interface User {
     idUsuario: string;
+    usuarioId?: string;
     nmUsuario: string;
     nmEmailUsuario: string;
     fotoPerfilUsuario?: string;
     cargo?: string; // Adicionado campo cargo vindo do backend
     authorities?: { authority: string }[]; // Mantido para compatibilidade se necessário
 }
+
+const normalizeUser = (rawUser: any): User | null => {
+    if (!rawUser) {
+        return null;
+    }
+
+    const normalizedUser: User = {
+        ...rawUser,
+        idUsuario: rawUser.idUsuario ?? rawUser.usuarioId ?? ''
+    };
+
+    if (normalizedUser.cargo) {
+        normalizedUser.cargo = normalizedUser.cargo.toUpperCase();
+    }
+
+    return normalizedUser;
+};
 
 // Interface para o valor do contexto de autenticação
 interface AuthContextType {
@@ -27,7 +45,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(() => {
         const savedUser = localStorage.getItem('user');
-        return savedUser ? JSON.parse(savedUser) : null;
+        return savedUser ? normalizeUser(JSON.parse(savedUser)) : null;
     });
     const [loading, setLoading] = useState<boolean>(false);
 
@@ -51,17 +69,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 })
             });
 
-            const userData = response.data;
-            
-            // Normaliza o cargo para garantir que esteja sempre disponível
-            // O backend agora retorna 'cargo' no LoginResponseDTO
-            if (userData.cargo) {
-                userData.cargo = userData.cargo.toUpperCase();
-            }
+            const userData = normalizeUser(response.data);
 
             setUser(userData);
             setLoading(false);
-            return userData;
+            return userData as User;
         } catch (error: any) {
             setLoading(false);
             throw error.response ? error.response.data : new Error('Erro de rede ou servidor indisponível');
